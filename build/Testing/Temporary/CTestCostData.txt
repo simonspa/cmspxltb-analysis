@@ -1,0 +1,26 @@
+TestJobsubExampleDaturaAloneCleanup 1 0.0175929
+TestJobsubExampleDaturaAloneSetup 1 0.0317221
+TestJobsubExampleDaturaAloneConverterRun 1 78.4033
+TestJobsubExampleDaturaAloneConverterLog 1 0.0154111
+TestJobsubExampleDaturaAloneConverterHisto 1 0.0021131
+TestJobsubExampleDaturaAloneConverterHotpix 1 0.081176
+TestJobsubExampleDaturaAloneConverterOutput 1 2.85848
+TestJobsubExampleDaturaAloneClusearchRun 1 149.799
+TestJobsubExampleDaturaAloneClusearchLog 1 0.023201
+TestJobsubExampleDaturaAloneClusearchHisto 1 0.0021801
+TestJobsubExampleDaturaAloneClusearchOffset 1 0.021168
+TestJobsubExampleDaturaAloneClusearchOutput 1 8.36282
+TestJobsubExampleDaturaAloneHitmakerRun 1 143.177
+TestJobsubExampleDaturaAloneHitmakerLog 1 0.089345
+TestJobsubExampleDaturaAloneHitmakerHisto 1 0.00206995
+TestJobsubExampleDaturaAloneHitmakerPrealign 1 0.45284
+TestJobsubExampleDaturaAloneHitmakerOutput 1 8.42915
+TestJobsubExampleDaturaAloneAlignRun 0 0
+TestJobsubExampleDaturaAloneAlignLog 1 0.00186396
+TestJobsubExampleDaturaAloneAlignHisto 1 0.000994921
+TestJobsubExampleDaturaAloneAlignDB 0 0
+TestJobsubExampleDaturaAloneAlignOutput 0 0
+---
+TestJobsubExampleDaturaAloneAlignRun
+TestJobsubExampleDaturaAloneAlignDB
+TestJobsubExampleDaturaAloneAlignOutput

@@ -1,0 +1,5 @@
+/home/spanns/ilcsoft/v01-16-02/Eutelescope/HEAD/lib/libEutelescope.so.0.9.0
+/home/spanns/ilcsoft/v01-16-02/Eutelescope/HEAD/lib/libEutelescope.so.0.9
+/home/spanns/ilcsoft/v01-16-02/Eutelescope/HEAD/lib/libEutelescope.so
+/home/spanns/ilcsoft/v01-16-02/Eutelescope/HEAD/bin/pede2lcio
+/home/spanns/ilcsoft/v01-16-02/Eutelescope/HEAD/bin/pedestalmerge
