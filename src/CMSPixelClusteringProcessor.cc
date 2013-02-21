@@ -1,4 +1,4 @@
-// Version: $Id: CMSPixelClusteringProcessor.cc 2367 2013-02-12 15:41:08Z hperrey $
+// Version: $Id: CMSPixelClusteringProcessor.cc 2422 2013-02-21 12:35:22Z spanns $
 /*========================================================================*/
 /*          CMSPixel ClusteringProcessor (clustering of zs data)          */
 /*          Author: Simon Spannagel                                       */
@@ -77,7 +77,8 @@
 #include <list>
 #include <algorithm>
 #include <set>
-
+#include <stdio.h>
+#include <iostream>
 
 
 using namespace std;

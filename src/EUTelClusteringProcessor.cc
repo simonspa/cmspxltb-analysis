@@ -1,4 +1,4 @@
-// Version: $Id: EUTelClusteringProcessor.cc 2419 2013-02-20 08:59:04Z hamnett $
+// Version: $Id: EUTelClusteringProcessor.cc 2422 2013-02-21 12:35:22Z spanns $
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
 // Version $ $
 /*
@@ -68,6 +68,8 @@
 #include <memory>
 #include <list>
 #include <cstdio>
+#include <stdio.h>
+#include <iostream>
 
 using namespace std;
 using namespace lcio;
