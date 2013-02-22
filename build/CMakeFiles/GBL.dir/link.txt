@@ -1,2 +1,0 @@
-/home/spanns/ilcsoft/v01-16-02/java/usr/bin/ar cr lib/libGBL.a  CMakeFiles/GBL.dir/gbl/cpp/src/GblData.cpp.o CMakeFiles/GBL.dir/gbl/cpp/src/GblPoint.cpp.o CMakeFiles/GBL.dir/gbl/cpp/src/VMatrix.cpp.o CMakeFiles/GBL.dir/gbl/cpp/src/BorderedBandMatrix.cpp.o CMakeFiles/GBL.dir/gbl/cpp/src/GblTrajectory.cpp.o CMakeFiles/GBL.dir/gbl/cpp/src/MilleBinary.cpp.o
-/home/spanns/ilcsoft/v01-16-02/java/usr/bin/ranlib lib/libGBL.a
