@@ -1,5 +1,5 @@
 // Author:  Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version: $Id: EUTelRunHeaderImpl.cc 2285 2013-01-18 13:46:44Z hperrey $
+// Version: $Id: EUTelRunHeaderImpl.cc 2424 2013-02-21 14:29:07Z hamnett $
 
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -24,6 +24,28 @@
 using namespace std;
 using namespace eutelescope;
 
+EUTelRunHeaderImpl::EUTelRunHeaderImpl(const EUTelRunHeaderImpl &z) : _lcHeader(NULL) {
+  IMPL::LCRunHeaderImpl *zlcrunheader = const_cast< EUTelRunHeaderImpl& >(z).lcRunHeader();
+  _lcHeader->setRunNumber(zlcrunheader->getRunNumber());
+  _lcHeader->setDetectorName(zlcrunheader->getDetectorName());
+  _lcHeader->setDescription(zlcrunheader->getDescription());
+  std::vector< std::string > *activesubdetectors = const_cast< std::vector< std::string >* >(zlcrunheader->getActiveSubdetectors());
+  for(std::vector< std::string >::iterator it = activesubdetectors->begin(); it != activesubdetectors->end(); ++it){
+    _lcHeader->addActiveSubdetector(*it);
+  }
+}
+
+EUTelRunHeaderImpl& EUTelRunHeaderImpl::operator = (const EUTelRunHeaderImpl &z){
+  if (this == &z) return *this;  //This handles self assignment
+  IMPL::LCRunHeaderImpl *zlcrunheader = const_cast< EUTelRunHeaderImpl& >(z).lcRunHeader();
+  _lcHeader->setRunNumber(zlcrunheader->getRunNumber());
+  _lcHeader->setDetectorName(zlcrunheader->getDetectorName());
+  _lcHeader->setDescription(zlcrunheader->getDescription());
+  std::vector< std::string > *activesubdetectors = const_cast< std::vector< std::string >* >(zlcrunheader->getActiveSubdetectors());
+  for(std::vector< std::string >::iterator it = activesubdetectors->begin(); it != activesubdetectors->end(); ++it){
+    _lcHeader->addActiveSubdetector(*it);
+  }
+}
 
 void EUTelRunHeaderImpl::setHeaderVersion (float ver) {
    // sets the header implementation version number

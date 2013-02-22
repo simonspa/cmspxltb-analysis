@@ -1,6 +1,6 @@
 
 // Author: A.F.Zarnecki, University of Warsaw <mailto:zarnecki@fuw.edu.pl>
-// @version: $Id: EUTelAPIXHistograms.cc 2367 2013-02-12 15:41:08Z hperrey $
+// @version: $Id: EUTelAPIXHistograms.cc 2428 2013-02-22 14:22:11Z diont $
 
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -897,12 +897,12 @@ void EUTelAPIXHistograms::processEvent( LCEvent * event ) {
 
     if(debug)message<MESSAGE5> ( log() << _measuredX.size() << " hits at DUT " );
 
-	if (_noHitYet && ( _measuredX.size()==0 ) ) {
+	if (_noHitYet && ( _measuredX.empty() ) ) {
 		_eventsWithNoHit++;
 		// anything to be done before returning?
 		return;
 	}
-	if ((_noHitYet && (_measuredX.size()!=0) ) || (_measuredX.size()>=1)){
+	if ((_noHitYet && (!_measuredX.empty()) ) || (_measuredX.size()>=1)){
 		if (_noHitYet) cout << _eventsWithNoHit << "events before first hit" << endl;
 		_noHitYet = false;
 		// determine transformation ...

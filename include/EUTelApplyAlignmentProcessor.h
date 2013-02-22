@@ -96,7 +96,7 @@ namespace eutelescope {
    *  then rotated.
    *
    *  @author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-   *  @version $Id: EUTelApplyAlignmentProcessor.h 2285 2013-01-18 13:46:44Z hperrey $
+   *  @version $Id: EUTelApplyAlignmentProcessor.h 2423 2013-02-21 14:21:50Z hamnett $
    *
    *
    */
@@ -243,6 +243,17 @@ namespace eutelescope {
 
     //! Reference Hit file 
     std::string _referenceHitLCIOFile;
+
+  #ifndef DISALLOW_COPY_AND_ASSIGN
+  //Following #define stops the accidental creation of a copy or assignment operator by causing a link error. Copy and Assignment operators not allowed because they are unnecessary and the cause of many bugs
+  #define DISALLOW_COPY_AND_ASSIGN(EUTelApplyAlignmentProcessor) \
+  EUTelApplyAlignmentProcessor(const EUTelApplyAlignmentProcessor&); \
+  void operator=(const EUTelApplyAlignmentProcessor&);
+
+  //Private Functions
+  DISALLOW_COPY_AND_ASSIGN(EUTelApplyAlignmentProcessor)//See #define just above
+  #endif
+
 
   protected:
 

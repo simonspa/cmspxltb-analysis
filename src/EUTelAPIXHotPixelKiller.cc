@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelAPIXHotPixelKiller.cc 2367 2013-02-12 15:41:08Z hperrey $
+// Version $Id: EUTelAPIXHotPixelKiller.cc 2429 2013-02-22 14:24:44Z diont $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -516,7 +516,7 @@ string EUTelAPIXHotPixelKiller::printSummary() const {
     singleLine << "-";
   }
 
-  if ( _killedPixelVec.size() == 0 ) {
+  if ( _killedPixelVec.empty() ) {
     return "" ;
   }
 

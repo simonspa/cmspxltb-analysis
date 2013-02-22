@@ -1,4 +1,4 @@
-// Version: $Id: EUTelSparseDataImpl.tcc 2235 2013-01-14 14:57:29Z hperrey $
+// Version: $Id: EUTelSparseDataImpl.tcc 2426 2013-02-22 14:15:01Z diont $
 // -*- mode: c++; mode: auto-fill; mode: flyspell-prog; -*-
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -82,7 +82,7 @@ namespace eutelescope {
 	}
       }
       
-      if ( groupedPixel.size() != 0 )   listOfList.push_back( groupedPixel );
+      if ( !groupedPixel.empty() )   listOfList.push_back( groupedPixel );
       
     }
     
