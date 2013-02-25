@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelMatrixDecoder.cc 2369 2013-02-13 12:36:31Z hamnett $
+// Version $Id: EUTelMatrixDecoder.cc 2433 2013-02-25 10:08:07Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -64,7 +64,12 @@ EUTelMatrixDecoder::EUTelMatrixDecoder(int xNoOfPixel, int yNoOfPixel, int xMin,
 
 
 #ifdef USE_GEAR
-EUTelMatrixDecoder::EUTelMatrixDecoder(gear::SiPlanesLayerLayout * siPlanes, int layerIndex) {
+EUTelMatrixDecoder::EUTelMatrixDecoder(gear::SiPlanesLayerLayout * siPlanes, int layerIndex)
+: _xNoOfPixel(0),
+  _yNoOfPixel(0),
+  _xMin(0),
+  _yMin(0)
+{
   _xNoOfPixel = siPlanes->getSensitiveNpixelX(layerIndex);
   _yNoOfPixel = siPlanes->getSensitiveNpixelY(layerIndex);
   _xMin = 0;

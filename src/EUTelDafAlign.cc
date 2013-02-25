@@ -1,4 +1,4 @@
-// Version: $Id: EUTelDafAlign.cc 2367 2013-02-12 15:41:08Z hperrey $
+// Version: $Id: EUTelDafAlign.cc 2433 2013-02-25 10:08:07Z hamnett $
 // Author Havard Gjersdal, UiO(haavagj@fys.uio.no)
 /*!
  * This is a track fitting processor for the Eutelescope package. 
@@ -89,7 +89,29 @@ using namespace marlin;
 using namespace eutelescope;
 
 
-EUTelDafAlign::EUTelDafAlign () : EUTelDafBase("EUTelDafAlign"){
+EUTelDafAlign::EUTelDafAlign ()
+: EUTelDafBase("EUTelDafAlign"),
+  _runPede(false), 
+  _pedeSteerfileName(""),
+  _binaryFilename(""),
+  _alignmentConstantLCIOFile(""),
+  _alignmentConstantCollectionName(""),
+  _translate(),
+  _translateX(),
+  _translateY(),
+  _zRot(),
+  _scale(),
+  _scaleX(),
+  _scaleY(),
+  _resXMin(),
+  _resXMax(),
+  _resYMin(),
+  _resYMax(),
+  _mille(NULL),
+  _resX(),
+  _resY(),
+  _dutMatches()
+{
     //Child spesific params and description
   dafParams();
 }
