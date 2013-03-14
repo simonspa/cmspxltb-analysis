@@ -8,7 +8,7 @@
 
 // based on EUTelCalibrateEvent:
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: CMSPixelCalibrateEvent.cc 2367 2013-02-12 15:41:08Z hperrey $
+// Version $Id: CMSPixelCalibrateEvent.cc 2469 2013-03-14 10:52:42Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -98,7 +98,7 @@ CMSPixelCalibrateEventProcessor::CMSPixelCalibrateEventProcessor () :Processor("
                              _pixelType , static_cast<int> ( 1 ) );
 
     registerProcessorParameter ("calibrationFile", "Calibration file prefix containing the p0-p3 parameters for the Tanh fit. Use %i for the ROC number.",
-                              _calibrationFile, std::string ("phCalibrationFit60_C%i.dat"));
+                              _calibrationFile, std::string ("phCalibrationFit60_C.dat"));
     registerProcessorParameter ("calibrationType", "Switch between calibration input data types phCalibration (0)  and Gaintanh calibration (1).",
                               _phCalibration, static_cast< bool > ( 1 ) );
 	registerProcessorParameter("HistogramFilling","Switch on or off the histogram filling", _fillHistos, static_cast< bool > ( false ) );
@@ -149,8 +149,9 @@ void CMSPixelCalibrateEventProcessor::initializeCalibration() throw ( marlin::St
 
         std::vector< cal_param > cal_roc;
         char calibrationFile[100];
-            
-        sprintf(calibrationFile,_calibrationFile.c_str(), i);
+        std::stringstream cf;
+        cf << _calibrationFile << i;
+        strcpy(calibrationFile,cf.str().c_str());
         streamlog_out( DEBUG5 ) << "ROC" << i << " File: " << calibrationFile << endl;
 
         std::ifstream* file = new std::ifstream(calibrationFile);
@@ -207,9 +208,10 @@ void CMSPixelCalibrateEventProcessor::initializeGaintanhCalibration() throw ( ma
 
         std::vector< cal_param > cal_roc;
         char calibrationFile[100];
-            
-        sprintf(calibrationFile,_calibrationFile.c_str(), i);
-        streamlog_out( DEBUG5 ) << "ROC" << i << " File: " << calibrationFile << endl;
+        std::stringstream cf;
+	cf << _calibrationFile << i;
+	strcpy(calibrationFile,cf.str().c_str());
+	streamlog_out( DEBUG5 ) << "ROC" << i << " File: " << calibrationFile << endl;
 
         std::ifstream* file = new std::ifstream(calibrationFile);
 

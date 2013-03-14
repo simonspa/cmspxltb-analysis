@@ -1,4 +1,4 @@
-// Version $Id: EUTelCorrelator.cc 2400 2013-02-18 09:21:16Z hperrey $
+// Version $Id: EUTelCorrelator.cc 2468 2013-03-14 09:30:53Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -690,7 +690,7 @@ void EUTelCorrelator::processEvent (LCEvent * event) {
                                                                          getElementAt( iExt ) );
 
         double * externalPosition;
-        externalPosition = (double *) externalHit->getPosition();
+        externalPosition = const_cast< double* >( externalHit->getPosition() );
 
         int externalSensorID = guessSensorID( externalPosition );
 
@@ -705,7 +705,7 @@ void EUTelCorrelator::processEvent (LCEvent * event) {
           TrackerHitImpl  * internalHit = static_cast< TrackerHitImpl * > ( inputHitCollection->
                                                                             getElementAt( iInt ) );
           double * internalPosition;
-          internalPosition = (double *) internalHit->getPosition(  );
+          internalPosition = const_cast< double* >( internalHit->getPosition() );
 
           int internalSensorID = guessSensorID( internalPosition );
 

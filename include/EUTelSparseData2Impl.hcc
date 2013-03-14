@@ -80,7 +80,7 @@ namespace eutelescope {
    *  \image html clusteringPerfomance.png "Different algorithms performance"
    *
    *  @author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-   *  @version $Id: EUTelSparseData2Impl.hcc 2235 2013-01-14 14:57:29Z hperrey $
+   *  @version $Id: EUTelSparseData2Impl.hcc 2465 2013-03-14 09:12:55Z hamnett $
    */
   template<class PixelType>
   class EUTelSparseData2Impl {
@@ -88,7 +88,13 @@ namespace eutelescope {
   public:
     //! Default constructor
     EUTelSparseData2Impl(IMPL::TrackerDataImpl * data);
+    /*
+    //!Copy Constructor
+    EUTelSparseData2Impl( const EUTelSparseData2Impl & z);
 
+    //!Assignment Operator
+    EUTelSparseData2Impl & operator=( const EUTelSparseData2Impl & z);
+    */
     //! Destructor
     virtual ~EUTelSparseData2Impl() { /* NOOP */ ; }
 

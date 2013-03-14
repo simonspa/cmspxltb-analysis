@@ -1,4 +1,4 @@
-// Version: $Id: EUTelSparseData2Impl.tcc 2235 2013-01-14 14:57:29Z hperrey $
+// Version: $Id: EUTelSparseData2Impl.tcc 2465 2013-03-14 09:12:55Z hamnett $
 // -*- mode: c++; mode: auto-fill; mode: flyspell-prog; -*-
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -35,7 +35,17 @@ namespace eutelescope {
 
 
   } 
-  
+ /* 
+  template<class PixelType>
+  EUTelSparseData2Impl<PixelType>::EUTelSparseData2Impl( const EUTelSparseData2Impl & z ) {
+
+  }
+
+  template<class PixelType>
+  EUTelSparseData2Impl<PixelType> & EUTelSparseData2Impl<PixelType>::operator=( const EUTelSparseData2Impl & z ) {
+    return *this;
+  }
+*/
   template<class PixelType>
   unsigned int EUTelSparseData2Impl<PixelType>::size() const {
     return _pixelVec.size();
