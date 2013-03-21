@@ -2,7 +2,7 @@
 // Author Loretta Negrini, Univ. Insubria <mailto:loryneg@gmail.com>
 // Author Silvia Bonfanti, Univ. Insubria <mailto:silviafisica@gmail.com>
 // Author Yulia Furletova, Uni-Bonn <mailto:yulia@mail.cern.ch>
-// Version $Id: EUTelNativeReader.cc 2367 2013-02-12 15:41:08Z hperrey $
+// Version $Id: EUTelNativeReader.cc 2497 2013-03-21 23:55:56Z spanns $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -170,16 +170,6 @@ void EUTelNativeReader::readDataSource(int numEvents) {
   }
 
   while ( reader.NextEvent() && (eventCounter < numEvents ) ) {
-
-    // inform the user about the reading status
-    if ( eventCounter % 1000 == 0 )
-      streamlog_out ( MESSAGE4 ) << "Processing event "
-                                 << setw(6) << setiosflags( ios::right ) << reader.Event().GetEventNumber() << resetiosflags(ios::right)
-                                 << " in run "  << setw(6)
-                                 << setiosflags( ios::right ) << setfill('0') << reader.Event().GetRunNumber() << resetiosflags(ios::right)
-                                 << setfill(' ') << " (Total = " << setw(10)
-                                 << setiosflags( ios::right ) << eventCounter << resetiosflags(ios::right) << ")"
-                                 << setiosflags( ios::left ) << endl;
 
     const eudaq::DetectorEvent& eudaqEvent = reader.Event();
 
