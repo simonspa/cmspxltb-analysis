@@ -1,6 +1,6 @@
 // Contact: Igor Rubinskiy, DESY <mailto:igorrubinsky@gmail.com>
 //
-// Version: $Id: EUTelMille.cc 2489 2013-03-21 12:16:02Z hamnett $
+// Version: $Id: EUTelMille.cc 2490 2013-03-21 14:32:10Z spanns $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
