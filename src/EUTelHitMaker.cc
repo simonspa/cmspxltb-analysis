@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelHitMaker.cc 2489 2013-03-21 12:16:02Z hamnett $
+// Version $Id: EUTelHitMaker.cc 2491 2013-03-21 18:27:32Z spanns $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
