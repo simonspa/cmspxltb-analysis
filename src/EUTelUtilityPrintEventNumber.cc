@@ -43,7 +43,7 @@ EUTelUtilityPrintEventNumber::EUTelUtilityPrintEventNumber() :
   registerProcessorParameter( "EveryNEvents" , 
 			      "Print event number every n Events (default 100)"  ,
 			      _everyNEvents ,
-			      100 ) ;
+			      1000 ) ;
   registerOptionalParameter( "printTimestamp" , 
 			      "print the event timestamp as read from LCIO"  ,
 			      _printTimestamp ,
