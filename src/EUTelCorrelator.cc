@@ -1,4 +1,4 @@
-// Version $Id: EUTelCorrelator.cc 2489 2013-03-21 12:16:02Z hamnett $
+// Version $Id: EUTelCorrelator.cc 2493 2013-03-21 18:45:41Z spanns $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
