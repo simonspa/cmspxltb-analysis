@@ -92,6 +92,7 @@ void EUTelUtilityPrintEventNumber::processEvent( LCEvent * evt ) {
     if(_printTimestamp) streamlog_out(DEBUG5) << ", timestamp " << evt->getTimeStamp();
     streamlog_out(DEBUG5) << std::endl;
   }
+  totalevents++;
 }
     
     
@@ -102,8 +103,7 @@ void EUTelUtilityPrintEventNumber::check( LCEvent * /* evt */ ) {
     
     
 void EUTelUtilityPrintEventNumber::end(){ 
-  streamlog_out(MESSAGE4) << "PrintEventNumber::end()  " << name() 
-    			  << " processed " << totalevents 
-    			  << " events in " << totalruns << " runs "
+  streamlog_out(MESSAGE4) << "Finished. Processed " << totalevents 
+    			  << " events in " << totalruns << " runs in total."
 			  << std::endl ;
 }
