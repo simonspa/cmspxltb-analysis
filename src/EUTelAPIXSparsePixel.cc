@@ -1,5 +1,5 @@
 // Author:  Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version: $Id: EUTelAPIXSparsePixel.cc 2285 2013-01-18 13:46:44Z hperrey $
+// Version: $Id: EUTelAPIXSparsePixel.cc 2489 2013-03-21 12:16:02Z hamnett $
  
 
 /*
@@ -45,9 +45,9 @@ EUTelAPIXSparsePixel::EUTelAPIXSparsePixel(short xCoord, short yCoord, short sig
 EUTelAPIXSparsePixel::EUTelAPIXSparsePixel(const EUTelAPIXSparsePixel &orig) : EUTelBaseSparsePixel() {
   _xCoord = orig.getXCoord();
   _yCoord = orig.getYCoord();
-  _signal = (short)orig.getSignal();
+  _signal = static_cast< short >(orig.getSignal());
   _chip = orig.getChip();
-  _time = (short)orig.getTime();
+  _time = static_cast< short >(orig.getTime());
   _noOfElements = orig.getNoOfElements();
   _type = orig.getSparsePixelType();
 }

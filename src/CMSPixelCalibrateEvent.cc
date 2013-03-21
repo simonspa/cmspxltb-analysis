@@ -8,7 +8,7 @@
 
 // based on EUTelCalibrateEvent:
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: CMSPixelCalibrateEvent.cc 2469 2013-03-14 10:52:42Z hamnett $
+// Version $Id: CMSPixelCalibrateEvent.cc 2488 2013-03-21 10:45:22Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -351,10 +351,10 @@ void CMSPixelCalibrateEventProcessor::processEvent (LCEvent * event) {
 		else rangecheck = calWeibull(corrected,Pixel.getSignal());
                 
 	        if(rangecheck) {
-		  correctedPixel->setSignal((short int)corrected);
+		  correctedPixel->setSignal( static_cast< short int >(corrected));
                     
                     // Filling histogramms if needed:
-               		if ( _fillHistos ) fillHistos ( (int)Pixel.getSignal(), (int)correctedPixel->getSignal(), iDetector );
+               		if ( _fillHistos ) fillHistos ( static_cast< int >(Pixel.getSignal()), static_cast< int >(correctedPixel->getSignal()), iDetector );
                		
                		// Debug output:
                     streamlog_out ( DEBUG5 ) << "evt" << evt->getEventNumber() << " ROC" << iDetector << " Pixel " << Pixel.getXCoord() << " " << Pixel.getYCoord() << ": " << Pixel.getSignal() << " -> " << correctedPixel->getSignal() << endl;

@@ -1,4 +1,4 @@
-// Version: $Id: EUTelBrickedClusterImpl.cc 2285 2013-01-18 13:46:44Z hperrey $
+// Version: $Id: EUTelBrickedClusterImpl.cc 2488 2013-03-21 10:45:22Z hamnett $
 // Author Christian Takacs, SUS UNI HD <mailto:ctakacs@rumms.uni-mannheim.de>
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -801,7 +801,7 @@ void EUTelBrickedClusterImpl::setOutsiderValuesInVectorInterpretedAsBrickedMatri
         streamlog_out( WARNING4 ) << " BRICKED PIXEL FIXED FRAME CLUSTER SIZE MUST BE 3x3!!!" << endl;
         streamlog_out( WARNING4 ) << " BUT IT IS " << xSize << "x" << ySize << "!!!" << endl;
     }
-    if (! ( (size_t)(xSize*ySize) == v.size() ) )
+    if (! ( static_cast< size_t >(xSize*ySize) == v.size() ) )
     {
         streamlog_out( WARNING4 ) << "EUTelBrickedClusterImpl::setOutsiderValuesInVectorInterpretedAsBrickedMatrix(FloatVec& v):" << endl;
         streamlog_out( WARNING4 ) << " BRICKED PIXEL FIXED FRAME CLUSTER SIZE DOES NOT MATCH VECTOR SIZE!!!" << endl;

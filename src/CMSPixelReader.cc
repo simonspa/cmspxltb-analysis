@@ -1,4 +1,4 @@
-// Version: $Id: CMSPixelReader.cc 2367 2013-02-12 15:41:08Z hperrey $
+// Version: $Id: CMSPixelReader.cc 2489 2013-03-21 12:16:02Z hamnett $
 /*========================================================================*/
 /*          CMSPixel file converter (RAW->LCIO)                           */
 /*          Author: Simon Spannagel (s.spannagel@cern.ch)                 */
@@ -273,7 +273,7 @@ void CMSPixelReader::readDataSource (int Ntrig)
         // Shuffle the planes according to the given processor parameter:
         std::vector<int> _shuffled = _shufflePlanes;
         for(unsigned int i = 0; i < _noOfROC; i++) {
-            if((int)i != _shuffled[i]) {
+            if(static_cast< int >(i) != _shuffled[i]) {
                 // Swap the two vectors:
                 event_data[i].swap(event_data[_shuffled[i]]);
                 // Prevent the re-swapping of the elements:

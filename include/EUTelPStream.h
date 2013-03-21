@@ -1,4 +1,4 @@
-/* $Id: EUTelPStream.h 2235 2013-01-14 14:57:29Z hperrey $ */
+/* $Id: EUTelPStream.h 2488 2013-03-21 10:45:22Z hamnett $ */
 /*
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001-2012 Jonathan Wakely
@@ -1000,7 +1000,7 @@ namespace redi
         {
         case 0 :
           // this is the new process, exec command
-          ::execl(shell_path, "sh", "-c", command.c_str(), (char*)NULL);
+          ::execl(shell_path, "sh", "-c", command.c_str(), static_cast< char* >(NULL));
 
           // can only reach this point if exec() failed
 

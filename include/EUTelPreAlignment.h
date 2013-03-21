@@ -1,4 +1,4 @@
-// Version: $Id: EUTelPreAlignment.h 2235 2013-01-14 14:57:29Z hperrey $
+// Version: $Id: EUTelPreAlignment.h 2488 2013-03-21 10:45:22Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -63,9 +63,9 @@ namespace eutelescope {
       }
       //Get weighted position from 3 neighboring bins
       // as long as we are not on the edges of our histogram:
-      if(maxBin== 0 || maxBin==(int)histo.size()){ 
+      if(maxBin== 0 || maxBin== static_cast< int >(histo.size())){ 
 	streamlog_out( WARNING3 ) << "At least one sensor frame might be empty or heavily misaligned. Please check the GEAR file!" << std::endl; 
-	return (float)maxBin;
+	return static_cast< float >(maxBin);
       }
       float weight(0.0);
       double pos1(0.0);

@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: ROOTProcessor.cc 2285 2013-01-18 13:46:44Z hperrey $
+// Version $Id: ROOTProcessor.cc 2489 2013-03-21 12:16:02Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -98,7 +98,7 @@ void ROOTProcessor::end(){
       TDirectory * baseDir = gDirectory;
       TObjArray *  array   = fullname.Tokenize("/");
       for (int iDir = 0; iDir < array->GetEntriesFast(); iDir++) {
-        TString      dir     = ((TObjString *) array->At(iDir))->GetString();
+        TString      dir     = ( dynamic_cast< TObjString* >( array->At(iDir)))->GetString();
         // if the directory doens't exist, create it!
         if ( !baseDir->cd(dir) ) {
           baseDir->mkdir(dir);

@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelStrasMimoTelReader.cc 2367 2013-02-12 15:41:08Z hperrey $
+// Version $Id: EUTelStrasMimoTelReader.cc 2488 2013-03-21 10:45:22Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -174,12 +174,12 @@ void EUTelStrasMimoTelReader::readDataSource (int numEvents) {
 	dataFile.read( reinterpret_cast<char *> (&_eventTrailer), sizeof(StrasEventTrailer) );
 	
 	// make some checks
-	if ( (unsigned) _eventTrailer.Eor != 0x89ABCDEF ) {
+	if ( static_cast< unsigned >(_eventTrailer.Eor) != 0x89ABCDEF ) {
 	  message<ERROR5> ( log() << "Event trailer not found on event " << _eventHeader.EvNo << ". Exiting ");
 	  exit(-1);
 	}
 	
-	if ( _eventHeader.EvNo != (unsigned) eventCounter ) {
+	if ( _eventHeader.EvNo != static_cast< unsigned >(eventCounter) ) {
 	  message<WARNING> ( log() << "Event number mismatch: expected " << eventCounter << " read " << _eventHeader.EvNo );
 	}
 

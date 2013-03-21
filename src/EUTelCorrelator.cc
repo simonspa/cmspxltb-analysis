@@ -1,4 +1,4 @@
-// Version $Id: EUTelCorrelator.cc 2468 2013-03-14 09:30:53Z hamnett $
+// Version $Id: EUTelCorrelator.cc 2489 2013-03-21 12:16:02Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -747,7 +747,7 @@ void EUTelCorrelator::processEvent (LCEvent * event) {
  
   p_end = unique( iplane_unique.begin(), iplane_unique.end());       // remove duplicates
 
-if( (int)iplane_unique.size()> _minNumberOfCorrelatedHits &&  trackX.size()==trackY.size())
+if( static_cast< int >(iplane_unique.size()) > _minNumberOfCorrelatedHits && trackX.size() == trackY.size())
 {
       for(size_t i=1;i< trackX.size();i++)
       {

@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelMimosa26Generator.cc 2285 2013-01-18 13:46:44Z hperrey $
+// Version $Id: EUTelMimosa26Generator.cc 2489 2013-03-21 12:16:02Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -106,7 +106,7 @@ void EUTelMimosa26Generator::processRunHeader (LCRunHeader * rdr) {
 
   // let's check if the number of sigma cut components is the same of
   // the detector number.
-  if ( (unsigned) _noOfDetector != _sigmaCutVec.size() ) {
+  if ( static_cast< unsigned >(_noOfDetector) != _sigmaCutVec.size() ) {
     streamlog_out( WARNING2 ) << "The number of values in the sigma cut does not match the number of detectors\n"
 			      << "Changing SigmaCutVec consequently." << endl;
     _sigmaCutVec.resize(_noOfDetector, _sigmaCutVec.back());

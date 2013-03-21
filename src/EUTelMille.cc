@@ -1,6 +1,6 @@
 // Contact: Igor Rubinskiy, DESY <mailto:igorrubinsky@gmail.com>
 //
-// Version: $Id: EUTelMille.cc 2367 2013-02-12 15:41:08Z hperrey $
+// Version: $Id: EUTelMille.cc 2489 2013-03-21 12:16:02Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -3221,7 +3221,7 @@ void EUTelMille::end() {
 	    streamlog_out ( DEBUG5 ) << " Parsing pede output for final chi2/ndf result.. " << endl;
 	    // search for the equal sign after which the result for chi2/ndf is stated within the next 80 chars 
 	    // (with offset of 22 chars since pch points to beginning of "Sum(..." string just found)
-	    char* pch = (char*) memchr (pch0+22, '=', 180);
+	    char* pch = static_cast< char* >((memchr (pch0+22, '=', 180)));
 	    if (pch!=NULL){
 	      char str[16];
 	      // now copy the numbers after the equal sign

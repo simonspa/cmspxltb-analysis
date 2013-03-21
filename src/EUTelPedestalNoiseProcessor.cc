@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelPedestalNoiseProcessor.cc 2367 2013-02-12 15:41:08Z hperrey $
+// Version $Id: EUTelPedestalNoiseProcessor.cc 2488 2013-03-21 10:45:22Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -1612,10 +1612,10 @@ void EUTelPedestalNoiseProcessor::finalizeProcessor(bool fromMaskingLoop) {
         for (int yPixel = _minY[iDetector]; yPixel <= _maxY[iDetector]; yPixel++) {
           for (int xPixel = _minX[iDetector]; xPixel <= _maxX[iDetector]; xPixel++) {
             if ( AIDA::IProfile2D * profile = dynamic_cast<AIDA::IProfile2D*> (_aidaHistoMap[ss.str()]) ) {
-              tempPede.push_back((float) profile->binHeight(xPixel,yPixel));
+              tempPede.push_back( static_cast< float >(profile->binHeight(xPixel,yPixel)));
               // WARNING: the noise part of this algorithm is still not
               // working probably because of a bug in RAIDA implementation
-              tempNoise.push_back((float) profile->binRms(xPixel,yPixel));
+              tempNoise.push_back( static_cast< float >(profile->binRms(xPixel,yPixel)));
               //cout << xPixel << " " << yPixel << " " << tempPede.back() << " " << tempNoise.back() << endl;
             } else {
               streamlog_out ( ERROR4 )  << "Problem with the AIDA temporary profile.\n"

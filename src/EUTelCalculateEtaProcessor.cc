@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelCalculateEtaProcessor.cc 2285 2013-01-18 13:46:44Z hperrey $
+// Version $Id: EUTelCalculateEtaProcessor.cc 2489 2013-03-21 12:16:02Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -333,7 +333,7 @@ void EUTelCalculateEtaProcessor::processEvent (LCEvent * event) {
             EUTelBrickedClusterImpl* p_tmpBrickedCluster = NULL;
             if ( type == kEUTelBrickedClusterImpl )
               {
-                p_tmpBrickedCluster = (EUTelBrickedClusterImpl*) cluster;
+                p_tmpBrickedCluster = dynamic_cast< EUTelBrickedClusterImpl* >(cluster);
                 //Static of cluster to EUTelBrickedClusterImpl* was done for sure in the case of
                 //( type == kEUTelBrickedClusterImpl ).
                 //So this cast must work as well!

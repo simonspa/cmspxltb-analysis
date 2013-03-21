@@ -1,5 +1,5 @@
 // Author Philipp Roloff, DESY <mailto:philipp.roloff@desy.de>
-// Version: $Id: EUTelMultiLineFit.cc 2285 2013-01-18 13:46:44Z hperrey $
+// Version: $Id: EUTelMultiLineFit.cc 2489 2013-03-21 12:16:02Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -531,7 +531,7 @@ void EUTelMultiLineFit::processEvent (LCEvent * event) {
       if ( detectorID != oldDetectorID ) {
         oldDetectorID = detectorID;
 
-        if ( _conversionIdMap.size() != (unsigned) _siPlanesParameters->getSiPlanesNumber() ) {
+        if ( _conversionIdMap.size() != static_cast< unsigned >(_siPlanesParameters->getSiPlanesNumber()) ) {
           // first of all try to see if this detectorID already belong to
           if ( _conversionIdMap.find( detectorID ) == _conversionIdMap.end() ) {
             // this means that this detector ID was not already inserted,
