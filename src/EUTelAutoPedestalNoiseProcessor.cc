@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelAutoPedestalNoiseProcessor.cc 2285 2013-01-18 13:46:44Z hperrey $
+// Version $Id: EUTelAutoPedestalNoiseProcessor.cc 2495 2013-03-21 19:00:36Z spanns $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -129,14 +129,7 @@ void EUTelAutoPedestalNoiseProcessor::processRunHeader (LCRunHeader * rdr) {
 
 void EUTelAutoPedestalNoiseProcessor::processEvent (LCEvent * event) {
 
-  if ( _iEvt % 1000 == 0 )
-    streamlog_out ( MESSAGE4 ) << "Processing event "
-                               << setw(6) << setiosflags(ios::right) << event->getEventNumber() << " in run "
-                               << setw(6) << setiosflags(ios::right) << setfill('0')  << event->getRunNumber() << setfill(' ')
-                               << " (Total = " << setw(10) << _iEvt << ")" << resetiosflags(ios::left) << endl;
   ++_iEvt;
-
-
   EUTelEventImpl * evt = static_cast<EUTelEventImpl*> (event) ;
 
   if ( evt->getEventType() == kEORE ) {
