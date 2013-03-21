@@ -56,7 +56,34 @@ FIND_PACKAGE( EUDAQ )
 FIND_PACKAGE( ROOT COMPONENTS Minuit )
 FIND_PACKAGE( LCCD  REQUIRED )               
 
-FOREACH( pkg Marlin MarlinUtil GSL AIDA EUDAQ ROOT LCCD )
+# development mode:
+
+
+# these need global environment vars:
+# alike to 
+# export EUDAQ="/home/ilcsoft/v01-16-02/Eutelescope/HEAD/external/eudaq/trunk"
+#
+# the Geant4 be compiled with SoXt and Coin3D and Xerces-C libraries
+# Geant4 environment loaded as 
+# $ILCSOFT/geant4/build-9.5.p02/geant4make.sh
+# now the allpix lib can be loaded as well 
+# allpix lib if checkout and compiled here:
+# export ALLPIX="/home/ilcsoft/v01-16-02/Eutelescope/HEAD/external/allpix"
+# the library is placed by default to
+# GBL if checkout and compiled as shared lib:
+# export GBL="/home/ilcsoft/v01-16-02/Eutelescope/HEAD/external/gbl/cpp"
+# the libs is here
+#
+ FIND_PACKAGE( XERCESC )               
+ FIND_PACKAGE( G4 )               
+ FIND_PACKAGE( ALLPIX )               
+# 
+# General Broken Line track fitter as shared lib:
+ FIND_PACKAGE( GBL )
+
+
+
+FOREACH( pkg Marlin MarlinUtil GSL AIDA EUDAQ ROOT LCCD GBL XERCESC G4 ALLPIX )
     IF( ${pkg}_FOUND )
         # include as "system" libraries: gcc will be less verbose w.r.t. warnings
         INCLUDE_DIRECTORIES(SYSTEM ${${pkg}_INCLUDE_DIRS} )
@@ -67,33 +94,67 @@ FOREACH( pkg Marlin MarlinUtil GSL AIDA EUDAQ ROOT LCCD )
     ENDIF()
 ENDFOREACH()
 
-INCLUDE_DIRECTORIES( ./gbl/cpp )
-AUX_SOURCE_DIRECTORY( ./gbl/cpp/src gbl_sources )
-ADD_LIBRARY( GBL STATIC ${gbl_sources} )
-IF( CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" )
- SET_TARGET_PROPERTIES(GBL PROPERTIES COMPILE_FLAGS "-fPIC")
-ENDIF( CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" ) 
-
-### DOCUMENTATION ###########################################################
-
-OPTION( INSTALL_DOC "Set to OFF to skip build/install Documentation" OFF )
-
-IF( INSTALL_DOC )
-    ADD_SUBDIRECTORY( ./doc )
-ENDIF()
+#MESSAGE (STATUS "${XERCESC_LIBRARIES}" )
+#MESSAGE (STATUS "${XERCESC_INCLUDE_DIRS}" )
 
 
 
 ### LIBRARY #################################################################
 
+
+
 # ------ add preprocessor flags ---------------------------------------------
 IF( EUDAQ_FOUND )
     ADD_DEFINITIONS( "-DUSE_EUDAQ -DEUDAQ_PLATFORM=PF_LINUX -DEUDAQ_FUNC=__PRETTY_FUNCTION__" )
     GET_FILENAME_COMPONENT( EUDAQ_LIBRARY_FULL_PATH ${EUDAQ_EUDAQ_LIBRARY} REALPATH )
-    INSTALL( PROGRAMS ${EUDAQ_LIBRARY_FULL_PATH} DESTINATION lib ) # PROGRAMS is like FILES but sets executable permissions
+    INSTALL( FILES ${EUDAQ_LIBRARY_FULL_PATH} DESTINATION lib ) # PROGRAMS is like FILES but sets executable permissions
 ELSE()
     MESSAGE( STATUS "WARNING: failed to configure Eutelescope with EUDAQ!!" )
 ENDIF()
+
+IF( GBL_FOUND )
+    ADD_DEFINITIONS( "-DUSE_GBL " )
+    GET_FILENAME_COMPONENT( GBL_LIBRARY_FULL_PATH ${GBL_GBL_LIBRARY} REALPATH )
+    INSTALL( FILES ${GBL_LIBRARY_FULL_PATH} DESTINATION lib ) # PROGRAMS is like FILES but sets executable permissions
+ELSE()
+    MESSAGE( STATUS "WARNING: failed to configure Eutelescope with GBL!!" )
+ENDIF()
+
+IF( ALLPIX_FOUND )
+    ADD_DEFINITIONS( "-DUSE_ALLPIX " )
+    GET_FILENAME_COMPONENT( ALLPIX_LIBRARY_FULL_PATH ${ALLPIX_ALLPIX_LIBRARY} REALPATH )
+    INSTALL( FILES ${ALLPIX_LIBRARY_FULL_PATH} DESTINATION lib ) # PROGRAMS is like FILES but sets executable permissions
+
+    # two ROOT libraries which are not always included in "root-config --glibs"
+    find_library(
+      LXMLPARSER
+      NAMES XMLParser 
+      PATHS  ${ROOT_LIBRARY_FULL_PATH}
+      PATH_SUFFIXES lib64 lib32 lib
+      NO_DEFAULT_PATH
+    )
+  
+
+    find_library(
+      LGEOM
+      NAMES Geom 
+      PATHS  ${ROOT_LIBRARY_FULL_PATH}
+      PATH_SUFFIXES lib64 lib32 lib
+      NO_DEFAULT_PATH
+    )
+
+    LINK_LIBRARIES( ${LGEOM} )
+    LINK_LIBRARIES( ${LXMLPARSER} )
+ 
+    MESSAGE ( STATUS "linking TGeom : ${LGEOM}" )
+    MESSAGE ( STATUS "linking TXMLParser : ${LXMLPARSER}" )
+
+ELSE()
+    IF( DEFINED "$ENV{ALLPIX}" )
+      MESSAGE( STATUS "WARNING: failed to configure Eutelescope with ALLPIX!!" )
+    ENDIF()
+ENDIF()
+
 
 IF ( AIDA_FOUND)
   ADD_DEFINITIONS("-DUSE_AIDA")
@@ -121,26 +182,28 @@ ADD_DEFINITIONS("-DDO_TESTING")
 
 # include directories
 INCLUDE_DIRECTORIES( ./include )
-INCLUDE_DIRECTORIES( ./gbl/cpp/include )
 
 #INSTALL_DIRECTORY( ./include DESTINATION . FILES_MATCHING PATTERN "*.h" )
 
 # definitions to pass to the compiler
+#ADD_DEFINITIONS( "-Wall -ansi -pedantic -Wextra" )
 ADD_DEFINITIONS( "-Wall -ansi -pedantic -Wextra" )
 ADD_DEFINITIONS( "-Wno-long-long" )
 
 # debuging warnings and switches - only active if  CMAKE_BUILD_TYPE  is set to debug
 SET(CMAKE_CXX_FLAGS_DEBUG "-g -fdiagnostics-show-option -Weffc++ -Wcast-align -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self -Wmissing-include-dirs -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wsign-promo -Wstrict-null-sentinel -Wswitch-default -Wundef" CACHE STRING "Debug options." FORCE )
+SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fdiagnostics-show-option -Wcast-align -Wcast-qual -Wdisabled-optimization -Winit-self -Wmissing-include-dirs -Wold-style-cast" CACHE STRING "Debug options." FORCE )
 # also useful: -Wshadow (however, GCC 4.1 uses this even for system libraries, causing many warnings from Marlin & co)
-SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fdiagnostics-show-option -Weffc++ -Wcast-align -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self -Wmissing-include-dirs -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wsign-promo -Wstrict-null-sentinel -Wswitch-default -Wundef" CACHE STRING "Debug options." FORCE )
+#SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fdiagnostics-show-option -Weffc++ -Wcast-align -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Winit-self -Wmissing-include-dirs -Wold-style-cast -Woverloaded-virtual -Wredundant-decls -Wsign-promo -Wstrict-null-sentinel -Wswitch-default -Wundef" CACHE STRING "Debug options." FORCE )
 
 # add library
 SET( libname ${PROJECT_NAME} )
 AUX_SOURCE_DIRECTORY( ./src library_sources )
 ADD_SHARED_LIBRARY( ${libname} ${library_sources} )
 INSTALL_SHARED_LIBRARY( ${libname} DESTINATION lib )
+#INSTALL_SHARED_LIBRARY( GBL DESTINATION lib )
 
-TARGET_LINK_LIBRARIES( ${libname} GBL)
+
 
 # used for alignment if Eutelescope was build with ROOT support
 IF( ROOT_FOUND AND ROOT_MINUIT_FOUND )
@@ -151,27 +214,27 @@ MACRO( ADD_EUTELESCOPE_TOOL _name )
     ADD_EXECUTABLE( ${_name} src/exec/${_name}.cxx )
     TARGET_LINK_LIBRARIES( ${_name} ${libname} )
     INSTALL( TARGETS ${_name} DESTINATION bin )
-    TARGET_LINK_LIBRARIES( ${_name} GBL) 
 ENDMACRO()
 
 ADD_EUTELESCOPE_TOOL( pede2lcio )
 ADD_EUTELESCOPE_TOOL( pedestalmerge )
 
+
 # !RELEASE: REMOVE FOR RELEASE VERSIONS
 # electric fence
-FIND_LIBRARY(EFENCE_LIBRARY
-    NAMES efence
-    DOC "The electric fence library"
-    PATHS
-        /usr/lib
-        /usr/local/lib
-        /usr/efence/lib
-        /usr/share/efence/lib
-    )
-IF(EFENCE_LIBRARY)
-  MESSAGE("Electric Fence library was found and will be linked against ${PROJECT_NAME}")
-  target_link_libraries(${libname} ${EFENCE_LIBRARY})
-ENDIF()
+ FIND_LIBRARY(EFENCE_LIBRARY
+     NAMES efence
+     DOC "The electric fence library"
+     PATHS
+         /usr/lib
+         /usr/local/lib
+         /usr/efence/lib
+         /usr/share/efence/lib
+     )
+ IF(EFENCE_LIBRARY)
+   MESSAGE("Electric Fence library was found and will be linked against ${PROJECT_NAME}")
+   target_link_libraries(${libname} ${EFENCE_LIBRARY})
+ ENDIF()
 
 # display some variables and write them to cache
 DISPLAY_STD_VARIABLES()

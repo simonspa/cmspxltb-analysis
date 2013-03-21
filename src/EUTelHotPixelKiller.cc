@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelHotPixelKiller.cc 2369 2013-02-13 12:36:31Z hamnett $
+// Version $Id: EUTelHotPixelKiller.cc 2476 2013-03-17 18:07:16Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -371,7 +371,7 @@ void EUTelHotPixelKiller::processEvent (LCEvent * event)
         return;
     }
     
-    if ( _iCycle > (unsigned short) _totalNoOfCycle )  return;
+    if ( _iCycle > static_cast< unsigned short >( _totalNoOfCycle ) )  return;
 
     if (_iEvt % 1000 == 0)
         streamlog_out( MESSAGE4 ) << "Processing event "
@@ -422,7 +422,7 @@ void EUTelHotPixelKiller::processEvent (LCEvent * event)
             _pixelMapVec.clear();
         }
         
-        for ( size_t iDetector = 0; iDetector < (unsigned int)statusCollectionVec->getNumberOfElements(); iDetector++) 
+        for ( size_t iDetector = 0; iDetector < static_cast< unsigned int >(statusCollectionVec->getNumberOfElements()); iDetector++) 
         {    
 	   // Apparently not used at all:        
 	   // TrackerRawDataImpl * status = dynamic_cast< TrackerRawDataImpl * > ( statusCollectionVec->getElementAt( iDetector ) );
@@ -446,7 +446,7 @@ void EUTelHotPixelKiller::processEvent (LCEvent * event)
 
      
     
-    for ( size_t iDetector = 0; iDetector < (unsigned int)statusCollectionVec->getNumberOfElements() ; iDetector++) 
+    for ( size_t iDetector = 0; iDetector < static_cast< unsigned int >(statusCollectionVec->getNumberOfElements()) ; iDetector++) 
     {
         TrackerRawDataImpl * status = dynamic_cast< TrackerRawDataImpl * > ( statusCollectionVec->getElementAt( iDetector ) );
         if( _firingFreqVec[iDetector].size() < status->getADCValues().size() )
@@ -562,7 +562,7 @@ string EUTelHotPixelKiller::printSummary() const {
 void EUTelHotPixelKiller::check( LCEvent * event ) 
 {
 
-    if ( _iCycle > (unsigned short) _totalNoOfCycle )  
+    if ( _iCycle > static_cast< unsigned short >( _totalNoOfCycle ) )
     {
         return;
     }
@@ -588,10 +588,10 @@ void EUTelHotPixelKiller::check( LCEvent * event )
                 
                 for ( unsigned int iPixel = 0; iPixel < _firingFreqVec[iDetector].size(); iPixel++ ) 
                 {
-                    if ( _firingFreqVec[iDetector][ iPixel ] / ( (double) _iEvt ) > _maxAllowedFiringFreq ) 
+                    if ( _firingFreqVec[iDetector][ iPixel ] / ( static_cast< double >( _iEvt ) ) > _maxAllowedFiringFreq ) 
                     {
                         streamlog_out ( DEBUG5 ) << " Pixel " << iPixel << " on detector " << _sensorIDVec.at( iDetector )
-                            << " is firing too often (" << _firingFreqVec[iDetector][iPixel] / ((double) _iEvt )
+                            << " is firing too often (" << _firingFreqVec[iDetector][iPixel] / (static_cast< double >( _iEvt ) )
                             << "). Masking it now on! " << endl;
                         status->adcValues()[ iPixel ] = EUTELESCOPE::FIRINGPIXEL;
                         ++killerCounter;
@@ -768,7 +768,7 @@ void EUTelHotPixelKiller::HotPixelDBWriter(LCEvent *input_event)
                     " writing out idet: " << iDetector <<
                     " ipixel: " << iPixel <<
                     " decoded_XY_index " << decoded_XY_index <<
-                    " fired " <<   _firingFreqVec[iDetector][ iPixel ]  / ( (double) _iEvt ) <<
+                    " fired " <<   _firingFreqVec[iDetector][ iPixel ]  / ( static_cast< double > ( _iEvt ) ) <<
                     " allowed = " << _maxAllowedFiringFreq << 
                     endl; 
                 sparseFrame->addSparsePixel( _pixelMapVec[iDetector][ decoded_XY_index] );                
@@ -849,7 +849,7 @@ void EUTelHotPixelKiller::bookAndFillHistos()
           if( _firingFreqVec.size() >0 && _firingFreqVec[iDetector].size() >0 && _firingFreqVec[ iDetector ][ iPixel ] > 0 )
           {
               firing2DHisto->fill(xPixel, yPixel, _firingFreqVec[ iDetector ][ iPixel ] );
-              firing1DHisto->fill( _firingFreqVec[ iDetector ][ iPixel ] / ( (double)  _noOfEventPerCycle ));
+              firing1DHisto->fill( _firingFreqVec[ iDetector ][ iPixel ] / ( static_cast< double >( _noOfEventPerCycle ) ));
               ++iPixel;
           }
       }

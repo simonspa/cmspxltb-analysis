@@ -1,4 +1,4 @@
-// Version: $Id: EUTelX0Processor.cc 2464 2013-03-14 09:10:06Z hamnett $
+// Version: $Id: EUTelX0Processor.cc 2472 2013-03-17 17:18:54Z hamnett $
 #include "EUTelX0Processor.h"
 #include <cmath>
 #include <cstdlib>
@@ -71,7 +71,7 @@ void EUTelX0Processor::init()
 {
   streamlog_out(DEBUG1) << "Running EUTelX0Processor::init()" << std::endl;
   _debug = false; 
-  int nobins = 1000, nobinsangle = 100;//Number of bins in the histograms
+  int nobins = 100, nobinsangle = 100;//Number of bins in the histograms
   double minbin = -0.2, maxbin = 0.2;//Maximum and minimum bin values
   double minbinangle = -0.5, maxbinangle = 0.5, minbinalpha = 0, maxbinalpha = 0.5;
   std::vector<double> empty;  

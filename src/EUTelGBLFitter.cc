@@ -5,6 +5,8 @@
  * Created on January 25, 2013, 2:53 PM
  */
 
+#ifdef USE_GBL
+ 
 // eutelescope includes ".h"
 #include "EUTelGBLFitter.h"
 #include "EUTelTrackFitter.h"
@@ -307,3 +309,5 @@ namespace eutelescope {
         return;
     }
 }
+
+#endif

@@ -80,7 +80,7 @@ namespace eutelescope {
    *  \image html clusteringPerfomance.png "Different algorithms performance"
    *
    *  @author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-   *  @version $Id: EUTelSparseData2Impl.hcc 2465 2013-03-14 09:12:55Z hamnett $
+   *  @version $Id: EUTelSparseData2Impl.hcc 2475 2013-03-17 17:40:48Z hamnett $
    */
   template<class PixelType>
   class EUTelSparseData2Impl {
@@ -265,7 +265,7 @@ namespace eutelescope {
     _trackerData->chargeValues().push_back( static_cast<float> (pixel->getYCoord()) );
     _trackerData->chargeValues().push_back( static_cast<float> (pixel->getSignal()) );
 
-    _pixelVec.push_back ( EUTelSimpleSparsePixel( (short) pixel->getXCoord(), (short) pixel->getYCoord(), (short) pixel->getSignal() ) );
+    _pixelVec.push_back ( EUTelSimpleSparsePixel( static_cast< short >(pixel->getXCoord()), static_cast< short >(pixel->getYCoord()), static_cast< short >(pixel->getSignal()) ) );
 
   }
 
@@ -322,7 +322,7 @@ namespace eutelescope {
     _trackerData->chargeValues().push_back( static_cast<float> (pixel->getChip()) );
     _trackerData->chargeValues().push_back( static_cast<float> (pixel->getTime()) );
 
-    _pixelVec.push_back ( EUTelAPIXSparsePixel( (short) pixel->getXCoord(), (short) pixel->getYCoord(), (short) pixel->getSignal(),  (short) pixel->getChip(), (short) pixel->getTime()) );
+    _pixelVec.push_back ( EUTelAPIXSparsePixel( static_cast< short >(pixel->getXCoord()), static_cast< short >(pixel->getYCoord()), static_cast< short >(pixel->getSignal()),  static_cast< short >(pixel->getChip()), static_cast< short >(pixel->getTime())) );
 
   }
 
@@ -330,19 +330,19 @@ namespace eutelescope {
 	template<>
 	inline void EUTelSparseData2Impl< EUTelSimpleSparsePixel>::fillPixelVec(){
 		for ( unsigned int index = 0 ; index <  _trackerData->getChargeValues().size() ; index += 3 ) {
-      	_pixelVec.push_back( EUTelSimpleSparsePixel( (short) _trackerData->getChargeValues()[ index ],
-				      (short) _trackerData->getChargeValues()[ index + 1 ],
-				      (short) _trackerData->getChargeValues()[ index + 2 ] ) );
+      	_pixelVec.push_back( EUTelSimpleSparsePixel( static_cast< short >(_trackerData->getChargeValues()[ index ]),
+				      static_cast< short >(_trackerData->getChargeValues()[ index + 1 ]),
+				      static_cast< short >(_trackerData->getChargeValues()[ index + 2 ]) ) );
     }
 	}
 	template<>
 	inline void EUTelSparseData2Impl< EUTelAPIXSparsePixel>::fillPixelVec(){
 		for ( unsigned int index = 0 ; index <  _trackerData->getChargeValues().size() ; index += 5 ) {
-      	_pixelVec.push_back( EUTelAPIXSparsePixel( (short) _trackerData->getChargeValues()[ index ],
-				      (short) _trackerData->getChargeValues()[ index + 1 ],
-				      (short) _trackerData->getChargeValues()[ index + 2 ],
-						(short) _trackerData->getChargeValues()[ index + 3 ],
-						(short) _trackerData->getChargeValues()[ index + 4 ]) );
+      	_pixelVec.push_back( EUTelAPIXSparsePixel( static_cast< short >(_trackerData->getChargeValues()[ index ]),
+				      static_cast< short >(_trackerData->getChargeValues()[ index + 1 ]),
+				      static_cast< short >(_trackerData->getChargeValues()[ index + 2 ]),
+						static_cast< short >(_trackerData->getChargeValues()[ index + 3 ]),
+						static_cast< short >(_trackerData->getChargeValues()[ index + 4 ])) );
     }
 	}
 

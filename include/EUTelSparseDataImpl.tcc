@@ -1,4 +1,4 @@
-// Version: $Id: EUTelSparseDataImpl.tcc 2426 2013-02-22 14:15:01Z diont $
+// Version: $Id: EUTelSparseDataImpl.tcc 2441 2013-03-08 10:55:04Z hamnett $
 // -*- mode: c++; mode: auto-fill; mode: flyspell-prog; -*-
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -20,7 +20,6 @@ namespace eutelescope {
     _nElement     = pixel->getNoOfElements();
     _type         = pixel->getSparsePixelType();
     _trackerData  = data;
-
   } 
   
   template<class PixelType>
@@ -28,7 +27,28 @@ namespace eutelescope {
     return _trackerData->getChargeValues().size() / _nElement;
   }
 
+  template<class PixelType> 
+  EUTelSparseDataImpl<PixelType>::EUTelSparseDataImpl(const EUTelSparseDataImpl &z) : _trackerData(NULL), _nElement(0), _type(0) {
+    _trackerData->setCellID0(z->trackerData()->getCellID0());
+    _trackerData->setCellID1(z->trackerData()->getCellID1());
+    _trackerData->setTime(z->trackerData()->getTime());
+    _trackerData->setChargeValues(z->trackerData()->chargeValues());
+    _nElement = z->getNElement();
+    _type = z->getType();
+  }
   
+  template<class PixelType> 
+  EUTelSparseDataImpl<PixelType>& EUTelSparseDataImpl<PixelType>::operator = (const EUTelSparseDataImpl &z){
+    if (this == &z) return *this;  //This handles self assignment
+    _trackerData->setCellID0(z->trackerData()->getCellID0());
+    _trackerData->setCellID1(z->trackerData()->getCellID1());
+    _trackerData->setTime(z->trackerData()->getTime());
+    _trackerData->setChargeValues(z->trackerData()->chargeValues());
+    _nElement = z->getNElement();
+    _type = z->getType();
+    return *this;
+  }
+
   template<class PixelType>
   std::list<std::list< unsigned int> > EUTelSparseDataImpl<PixelType>::findNeighborPixels(double minDistance) const {
 

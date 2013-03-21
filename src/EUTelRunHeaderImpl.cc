@@ -1,5 +1,5 @@
 // Author:  Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version: $Id: EUTelRunHeaderImpl.cc 2424 2013-02-21 14:29:07Z hamnett $
+// Version: $Id: EUTelRunHeaderImpl.cc 2461 2013-03-13 08:28:25Z hamnett $
 
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -45,6 +45,7 @@ EUTelRunHeaderImpl& EUTelRunHeaderImpl::operator = (const EUTelRunHeaderImpl &z)
   for(std::vector< std::string >::iterator it = activesubdetectors->begin(); it != activesubdetectors->end(); ++it){
     _lcHeader->addActiveSubdetector(*it);
   }
+  return *this;
 }
 
 void EUTelRunHeaderImpl::setHeaderVersion (float ver) {

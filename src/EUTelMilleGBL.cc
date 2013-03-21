@@ -9,8 +9,8 @@
  *   header with author names in all development based on this file.
  *
  */
-// built only if GEAR and MARLINUTIL are used
-#if defined(USE_GEAR) && defined(USE_MARLINUTIL)
+// built only if GEAR and MARLINUTIL are used; require USE_GBL flag as well
+#if defined(USE_GEAR) && defined(USE_MARLINUTIL) && defined(USE_GBL)
 
 // eutelescope includes ".h"
 #include "EUTelMilleGBL.h"
@@ -759,7 +759,7 @@ void EUTelMilleGBL::processEvent(LCEvent * event) {
         if (_nTracks != 0) {
             _theFitter->SetTrackCandidates(trackCandidates);
             _theFitter->FitTracks();
-
+//
             double chi2Trk = 0.;
             int ndfTrk = 0;
 

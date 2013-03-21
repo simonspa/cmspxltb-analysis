@@ -28,7 +28,7 @@ namespace eutelescope {
    *  read from the XML information file.
    *  
    *  @author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-   *  @version $Id: EUTelHistogramManager.h 2285 2013-01-18 13:46:44Z hperrey $
+   *  @version $Id: EUTelHistogramManager.h 2440 2013-03-08 10:54:03Z hamnett $
    */
   class EUTelHistogramInfo {
     
@@ -158,7 +158,7 @@ namespace eutelescope {
    *  available histograms.
    * 
    *  @author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-   *  @version $Id: EUTelHistogramManager.h 2285 2013-01-18 13:46:44Z hperrey $
+   *  @version $Id: EUTelHistogramManager.h 2440 2013-03-08 10:54:03Z hamnett $
    */ 
     
   class EUTelHistogramManager  {
@@ -169,7 +169,7 @@ namespace eutelescope {
      *  
      *  @param histoInfoFileName The histogram information file name
      */ 
-    EUTelHistogramManager(std::string histoInfoFileName) : _histoInfoFileName(histoInfoFileName) {;}
+    EUTelHistogramManager(std::string histoInfoFileName) : _histoInfoFileName(histoInfoFileName), _histoInfoMap() {;}
    
     //! Destructor
     /*! Deletes all the entries of the map since they all have been

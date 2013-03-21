@@ -69,7 +69,7 @@ namespace eutelescope {
    *  process run on this sparse data. 
    *  
    *  @author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-   *  @version $Id: EUTelSparseDataImpl.hcc 2369 2013-02-13 12:36:31Z hamnett $
+   *  @version $Id: EUTelSparseDataImpl.hcc 2441 2013-03-08 10:55:04Z hamnett $
    */  
   template<class PixelType>
   class EUTelSparseDataImpl {
@@ -77,7 +77,13 @@ namespace eutelescope {
   public:
     //! Default constructor
     EUTelSparseDataImpl(IMPL::TrackerDataImpl * data);
-   
+    
+    //! Copy constructor
+    EUTelSparseDataImpl( const EUTelSparseDataImpl &z );
+
+    //!Assignment Operator
+    EUTelSparseDataImpl& operator = ( const EUTelSparseDataImpl &z );
+
     //! Destructor
     virtual ~EUTelSparseDataImpl() { /* NOOP */ ; }
     
@@ -121,7 +127,13 @@ namespace eutelescope {
      *  @return A pointer to the output pixel same as @c pixel
      */ 
     PixelType *  getSparsePixelAt(unsigned int index, PixelType * pixel) const;
-    
+
+    //!Get NElement
+    unsigned int getNElement() const {return _nElement;}
+      
+    //!Get Type
+    SparsePixelType getType() const {return _type;}
+
     //! Get the number of sparse pixels in the collection
     /*! This utility can be used to know how many pixels are contained
      *  in the TrackerData.
@@ -141,17 +153,6 @@ namespace eutelescope {
     IMPL::TrackerDataImpl * trackerData(); 
 
   private:
-
-  #ifndef DISALLOW_COPY_AND_ASSIGN
-  //Following #define stops the accidental creation of a copy or assignment operator by causing a link error. Copy and Assignment operators not allowed because they are unnecessary and the cause of many bugs
-  #define DISALLOW_COPY_AND_ASSIGN(EUTelSparseDataImpl) \
-  EUTelSparseDataImpl(const EUTelSparseDataImpl&); \
-  void operator=(const EUTelSparseDataImpl&);
-
-  //Private Functions
-  DISALLOW_COPY_AND_ASSIGN(EUTelSparseDataImpl)//See #define just above
-  #endif
-
 
     //! This is the TrackerDataImpl
     /*! This is the object where the sparse data information are

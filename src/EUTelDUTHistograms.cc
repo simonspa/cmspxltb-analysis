@@ -1,4 +1,4 @@
-// @version: $Id: EUTelDUTHistograms.cc 2367 2013-02-12 15:41:08Z hperrey $
+// @version: $Id: EUTelDUTHistograms.cc 2436 2013-03-01 12:08:58Z diont $
 
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -706,7 +706,7 @@ void EUTelDUTHistograms::processEvent( LCEvent * event ) {
 //    printf("track %2d with ifit[", itrack);    
     for(int ifit=0;ifit<static_cast<int>(_fittedX[itrack].size()); ifit++)
     {
-      if( static_cast<int>(_measuredX.size()) < 1 ) continue;
+      if( _measuredX.empty() ) continue;
   //    printf("%2d %5.3f: ihit{", ifit, _fittedX[itrack][ifit] );
 
       for(int ihit=0; ihit< static_cast<int>(_measuredX.size()) ; ihit++)

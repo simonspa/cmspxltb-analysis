@@ -9,7 +9,7 @@
  */
 
 // built only if GEAR is used
-#ifdef USE_GEAR
+#if defined( USE_GEAR )
 
 // ROOT includes:
 #include "TVector3.h"
@@ -59,6 +59,9 @@
 #include <memory>
 #include <iostream>
 #include <iomanip>
+
+
+// __endofheader__
 
 using namespace std;
 using namespace marlin;
@@ -278,7 +281,7 @@ void EUTelMAPSdigi::init() {
     exit(-1);
   }
   
-  if ( _DigiLayerIDs.size() == 0 )
+  if ( _DigiLayerIDs.empty() )
   {
     streamlog_out ( ERROR4 ) <<  "The lsit of sensors is not defined in the steering file. Pls go back to your template and specify _DigiLayerIDs." << endl;
     exit(-1);
@@ -293,15 +296,15 @@ void EUTelMAPSdigi::init() {
 
   // Check if digitization parameters are not missing (!)
 
-  if(_depositedChargeScaling.size() == 0 ||
-     _applyPoissonSmearing.size() == 0 ||
-     _adcGain.size() == 0 ||
-     _adcGainVariation.size() == 0 ||
-     _adcNoise.size() == 0 ||
-     _adcRange.size() == 0 ||
-     _pixelReadoutType.size() == 0 ||
-     _zeroSuppressionThreshold.size() == 0 ||
-     _adcOffset.size() == 0 )
+  if(_depositedChargeScaling.empty() ||
+     _applyPoissonSmearing.empty() ||
+     _adcGain.empty() ||
+     _adcGainVariation.empty() ||
+     _adcNoise.empty() ||
+     _adcRange.empty() ||
+     _pixelReadoutType.empty() ||
+     _zeroSuppressionThreshold.empty() ||
+     _adcOffset.empty() )
     {
   streamlog_out ( ERROR4 ) <<  "Digitization parameters not given!" << endl
                     <<  "You have to specify all digitization parameters" << endl;
@@ -338,7 +341,7 @@ void EUTelMAPSdigi::init() {
 */
   // prepare digitization parameter index map
 
-  if(_DigiLayerIDs.size() > 0 )
+  if( !_DigiLayerIDs.empty() )
     for(unsigned int id=0; id<_DigiLayerIDs.size(); id++)
       _digiIdMap.insert( make_pair(_DigiLayerIDs.at(id), id ) );
 
@@ -352,6 +355,11 @@ void EUTelMAPSdigi::init() {
                                                       _integPixelSegmentsAlongW, _integPixelSegmentsAlongH);
       streamlog_out( MESSAGE4 )  << " Common TDS integration storage initialized  " << endl;
     }
+
+#if defined( USE_ALLPIX)
+  digitizerModulesNames.clear();
+#endif
+
 
 }
 
@@ -404,6 +412,74 @@ void EUTelMAPSdigi::processRunHeader (LCRunHeader * rdr) {
   ++_iRun;
 }
 
+#if defined( USE_ALLPIX )
+void EUTelMAPSdigi::SetupDetectors () 
+{
+        int itr        = 0;
+	int detectorId = 0;
+	digitizerModulesNames.clear();
+
+	// Digit manager
+	G4DigiManager * fDM = G4DigiManager::GetDMpointer();
+
+		G4String hcName = "";
+
+		// Now build the digit Collection name
+		G4String digitColectionName = _simhitCollectionName;
+         	G4String digitizerName = "Mimos26";
+
+		// Creating an instance of the actual digitizer, and keep pointer through the interface
+		AllPixDigitizerInterface * dmPtr;
+
+		G4String digitSuffix = "_";
+		digitSuffix += digitizerName;
+		digitSuffix += "Digitizer";
+		G4String digitizerModName =  GetNewName(hcName, "HitsCollection", digitSuffix);
+
+
+		digitizerModulesNames.push_back(digitizerModName);
+
+                    
+	        // __beginofdigitlist__
+		if (digitizerName == "FEI3Standard") {
+			AllPixFEI3StandardDigitizer * dp = new AllPixFEI3StandardDigitizer(digitizerModulesNames[itr] , hcName, digitColectionName);
+			dmPtr = static_cast<AllPixDigitizerInterface *> (dp);
+			cout << "    Setting up a " << digitizerName << " digitizer for det : " << detectorId << endl;
+		} else if (digitizerName == "Medipix2") {
+			AllPixMedipix2Digitizer * dp = new AllPixMedipix2Digitizer(digitizerModulesNames[itr] , hcName, digitColectionName);
+			dmPtr = static_cast<AllPixDigitizerInterface *> (dp);
+			cout << "    Setting up a " << digitizerName << " digitizer for det : " << detectorId << endl;
+		} else if (digitizerName == "Mimosa26") {
+			AllPixMimosa26Digitizer * dp = new AllPixMimosa26Digitizer(digitizerModulesNames[itr] , hcName, digitColectionName);
+			dmPtr = static_cast<AllPixDigitizerInterface *> (dp);
+			cout << "    Setting up a " << digitizerName << " digitizer for det : " << detectorId << endl;
+		} else if (digitizerName == "Timepix") {
+			AllPixTimepixDigitizer * dp = new AllPixTimepixDigitizer(digitizerModulesNames[itr] , hcName, digitColectionName);
+			dmPtr = static_cast<AllPixDigitizerInterface *> (dp);
+			cout << "    Setting up a " << digitizerName << " digitizer for det : " << detectorId << endl;
+		}else if (digitizerName == "MCTruth") {
+			AllPixMCTruthDigitizer * dp = new AllPixMCTruthDigitizer(digitizerModulesNames[itr] , hcName, digitColectionName);
+			dmPtr = static_cast<AllPixDigitizerInterface *> (dp);
+			cout << "    Setting up a " << digitizerName << " digitizer for det : " << detectorId << endl;
+		}// Included by newdigitizer.sh script --> LETCalculator
+		else if (digitizerName == "LETCalculator") {
+					AllPixLETCalculatorDigitizer * dp = new AllPixLETCalculatorDigitizer(digitizerModulesNames[itr] , hcName, digitColectionName);
+					dmPtr = static_cast<AllPixDigitizerInterface *> (dp);
+					cout << "    Setting up a " << digitizerName << " digitizer for det : " << detectorId << endl;
+				}
+ 
+        	// __endofdigitlist__
+		else {
+			G4cout << "    can't find digitizer with name : " << digitizerName << G4endl;
+			exit(1);
+		}
+
+		// push back the digitizer
+//		m_digiPtrs.push_back( dmPtr );
+		fDM->AddNewModule( dmPtr );
+}
+#endif
+
 
 void EUTelMAPSdigi::processEvent (LCEvent * event) {
 
@@ -430,16 +506,24 @@ void EUTelMAPSdigi::processEvent (LCEvent * event) {
   }
 
 
+  LCCollectionVec * simhitCollection   = 0;
+
   try {
 
-    LCCollectionVec * simhitCollection   = static_cast<LCCollectionVec*> (event->getCollection( _simhitCollectionName ));
+    simhitCollection = static_cast<LCCollectionVec*> (event->getCollection( _simhitCollectionName ));
+
+  } catch (DataNotAvailableException& e  ) {
+
+    streamlog_out  ( WARNING2 ) <<  "No input collection found on event " << event->getEventNumber()
+                                << " in run " << event->getRunNumber() << endl;
+  }
 
 
-    // prepare also an output collection
-    auto_ptr< lcio::LCCollectionVec > zsDataCollection( new LCCollectionVec ( LCIO::TRACKERDATA ) ) ;
+  // prepare also an output collection
+  auto_ptr< lcio::LCCollectionVec > zsDataCollection( new LCCollectionVec ( LCIO::TRACKERDATA ) ) ;
 
-    // prepare also the corresponding encoder
-    CellIDEncoder< TrackerDataImpl > zsDataEncoder ( EUTELESCOPE::ZSDATADEFAULTENCODING, zsDataCollection.get() ) ;
+  // prepare also the corresponding encoder
+  CellIDEncoder< TrackerDataImpl > zsDataEncoder ( EUTELESCOPE::ZSDATADEFAULTENCODING, zsDataCollection.get() ) ;
 
     int detectorID    = -99; // it's a non sense
     int oldDetectorID = -100;
@@ -454,6 +538,8 @@ void EUTelMAPSdigi::processEvent (LCEvent * event) {
 
     double gRotation[3] = { 0., 0., 0.}; // not rotated
 
+
+
     for ( int iHit = 0; iHit < simhitCollection->getNumberOfElements(); iHit++ ) 
     {
       if(debug>1) streamlog_out ( MESSAGE5 ) << "iHit = " << iHit << " :of: " << simhitCollection->getNumberOfElements() << endl;
@@ -466,7 +552,7 @@ void EUTelMAPSdigi::processEvent (LCEvent * event) {
       detectorID = simhit->getCellID0();
       if( detectorID > 99 ) continue;
 
-      if( _DigiLayerIDs.size() > 0 && _DigiLayerIDs[0] <  10 ) detectorID -=  1; 
+      if( !_DigiLayerIDs.empty() && _DigiLayerIDs[0] <  10 ) detectorID -=  1; 
 
       //
  
@@ -922,7 +1008,7 @@ for(unsigned int idet = 0; idet < _DigiLayerIDs.size(); idet++)
     std::map< int,  TDSPixelsChargeMap *>::iterator mapIterator;
 
     for(mapIterator = _pixelChargeMapCollection.begin();
-        mapIterator != _pixelChargeMapCollection.end(); mapIterator++)
+        mapIterator != _pixelChargeMapCollection.end(); ++mapIterator)
       {
         detectorID = mapIterator->first;
 
@@ -931,7 +1017,7 @@ for(unsigned int idet = 0; idet < _DigiLayerIDs.size(); idet++)
 
         int digiIndex = 0;
 
-        if( _DigiLayerIDs.size() > 0 ) digiIndex = _digiIdMap[detectorID];
+        if( !_DigiLayerIDs.empty() ) digiIndex = _digiIdMap[detectorID];
 
         _pixelChargeMap = mapIterator->second;
 
@@ -1059,7 +1145,7 @@ for(unsigned int idet = 0; idet < _DigiLayerIDs.size(); idet++)
                                       << "total charge deposited: " << totalCharge << endl;
 
             int ipixel = 0;
-            for(_pixelIterator = _vectorOfPixels.begin(); _pixelIterator != _vectorOfPixels.end(); _pixelIterator++)
+            for(_pixelIterator = _vectorOfPixels.begin(); _pixelIterator != _vectorOfPixels.end(); ++_pixelIterator)
             {
               streamlog_out( MESSAGE5 ) <<  " Pixel [" <<  ipixel << "] at  (" << _pixelIterator->getIndexAlongL()
                                       <<  "," <<  _pixelIterator->getIndexAlongW()
@@ -1071,7 +1157,7 @@ for(unsigned int idet = 0; idet < _DigiLayerIDs.size(); idet++)
 // Store pixel charges in the 2D histogram (charge map)
 // Only for events with debug output!
 
-            for(_pixelIterator = _vectorOfPixels.begin(); _pixelIterator != _vectorOfPixels.end(); _pixelIterator++)
+            for(_pixelIterator = _vectorOfPixels.begin(); _pixelIterator != _vectorOfPixels.end(); ++_pixelIterator)
             {
               double xpixel = _pixelIterator->getIndexAlongL() + 0.5;
               double ypixel = _pixelIterator->getIndexAlongW() + 0.5;
@@ -1124,7 +1210,7 @@ for(unsigned int idet = 0; idet < _DigiLayerIDs.size(); idet++)
 
                 if(pixelL > seedL+dLmax || pixelL < seedL-dLmax ||
                    pixelW > seedW+dWmax || pixelW < seedW-dWmax )
-                  _pixelIterator++;
+                  ++_pixelIterator;
                 else
                   {
                    double dist = (pixelL-seedL)*(pixelL-seedL)+(pixelW-seedW)*(pixelW-seedW);
@@ -1146,7 +1232,7 @@ for(unsigned int idet = 0; idet < _DigiLayerIDs.size(); idet++)
 
                    clusterCharge+=charge;
                    intClusterCharge+=icharge;
-                   _pixelIterator++;
+                   ++_pixelIterator;
                   }
               }
 
@@ -1155,7 +1241,7 @@ for(unsigned int idet = 0; idet < _DigiLayerIDs.size(); idet++)
 
            int iPixel=0;
            for(pixelAbsIterator=pixelAbsMap.begin();
-               pixelAbsIterator != pixelAbsMap.end(); pixelAbsIterator++)
+               pixelAbsIterator != pixelAbsMap.end(); ++pixelAbsIterator)
               {
               fillProf1D(_chargeProfileName,layerIndex,iPixel+0.5, pixelAbsIterator->second);
               iPixel++;
@@ -1164,7 +1250,7 @@ for(unsigned int idet = 0; idet < _DigiLayerIDs.size(); idet++)
 
            iPixel=0;
            for(pixelWeightedIterator=pixelWeightedMap.begin();
-               pixelWeightedIterator != pixelWeightedMap.end(); pixelWeightedIterator++)
+               pixelWeightedIterator != pixelWeightedMap.end(); ++pixelWeightedIterator)
               {
               fillProf1D(_weightedProfileName,layerIndex,iPixel+0.5, pixelWeightedIterator->second);
               iPixel++;
@@ -1209,10 +1295,6 @@ for(unsigned int idet = 0; idet < _DigiLayerIDs.size(); idet++)
 
 
     if ( isFirstEvent() ) _isFirstEvent = false;
-  } catch (DataNotAvailableException& e  ) {
-    streamlog_out  ( WARNING2 ) <<  "No input collection found on event " << event->getEventNumber()
-                                << " in run " << event->getRunNumber() << endl;
-  }
 
 }
 
@@ -1628,7 +1710,7 @@ void EUTelMAPSdigi::bookHistos() {
       int detectorID=_siPlanesLayerLayout->getSensitiveID(iDet);
       int digiIndex = 0;
 
-      if(_DigiLayerIDs.size() > 0 )digiIndex = _digiIdMap[detectorID];
+      if(!_DigiLayerIDs.empty() )digiIndex = _digiIdMap[detectorID];
       xMax*=_depositedChargeScaling[digiIndex]*_adcGain[digiIndex];
 
       bookHist1D(_signalHistoName, "Sensor signal", iDet,xNBin, xMin, xMax);
