@@ -76,12 +76,21 @@ void EUTelUtilityPrintEventNumber::processRunHeader( LCRunHeader* run) {
 void EUTelUtilityPrintEventNumber::processEvent( LCEvent * evt ) { 
 
       
-  if ( evt->getEventNumber()%_everyNEvents == 0 ) {
+  if ( evt->getEventNumber() <= 10 ||
+       (evt->getEventNumber() <= 100 && evt->getEventNumber()%10 == 0) ||
+       evt->getEventNumber()%_everyNEvents == 0) {
     streamlog_out(MESSAGE5) << "Processing event " 
 			    << std::setw(7) << evt->getEventNumber() 
 			    << " in run " << evt->getRunNumber();
     if(_printTimestamp) streamlog_out(MESSAGE5) << ", timestamp " << evt->getTimeStamp();
     streamlog_out(MESSAGE5) << std::endl;
+  }
+  else {
+    streamlog_out(DEBUG5) << "Processing event " 
+			    << std::setw(7) << evt->getEventNumber() 
+			    << " in run " << evt->getRunNumber();
+    if(_printTimestamp) streamlog_out(DEBUG5) << ", timestamp " << evt->getTimeStamp();
+    streamlog_out(DEBUG5) << std::endl;
   }
 }
     
