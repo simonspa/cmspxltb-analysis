@@ -1,4 +1,4 @@
-// Version: $Id: TDSPixelsChargeMap.h 2375 2013-02-14 13:27:01Z spanns $
+// Version: $Id: TDSPixelsChargeMap.h 2502 2013-03-22 10:07:30Z hamnett $
 /*
  *
  * Description:
@@ -625,7 +625,7 @@ namespace TDS {
     // k[0] = L, k[1] = W, dim - dimension (not used), *p - struct with parameters
     static double funChargeDistribution (double *k, size_t /* dim */ , void * p)
     {
-      ParamsOfFunChargeDistribution * gp = (ParamsOfFunChargeDistribution *)p;
+      ParamsOfFunChargeDistribution * gp = static_cast< ParamsOfFunChargeDistribution* >(p);
 
       // Variable for result storing
       double A;
