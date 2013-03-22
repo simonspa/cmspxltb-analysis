@@ -15,7 +15,9 @@ namespace eutelescope {
 
   /**  Prints event numbers to the screen depending on the EveryNEvents variable.
    *
-   *   @parameter EveryNEvents Print event number every n Events (default 100)
+   *   @parameter EveryNEvents Print event number for every n-th event
+   *
+   *   @parameter printTimestamp Print the events timestamp as read from LCIO
    * 
    */
   class EUTelUtilityPrintEventNumber : public marlin::Processor {
@@ -23,7 +25,7 @@ namespace eutelescope {
   public:
 	
     /* This method will be called by the marlin package
-     * It returns a processor of the currend type (here PrintEventNumberProcessor)
+     * It returns a processor of the currend type
      */
     virtual Processor*  newProcessor() { 
       return new EUTelUtilityPrintEventNumber;
@@ -76,8 +78,9 @@ namespace eutelescope {
     bool _printTimestamp;
     
     // count total events in case runs are concatenated:
-    int totalevents;
-    int totalruns;
+    unsigned int totalevents;
+    // count the total number of runs processed
+    unsigned int totalruns;
 
   };
   
