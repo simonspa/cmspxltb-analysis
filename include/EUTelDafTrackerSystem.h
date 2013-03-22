@@ -1,10 +1,14 @@
-// Version: $Id: EUTelDafTrackerSystem.h 2369 2013-02-13 12:36:31Z hamnett $
+// Version: $Id: EUTelDafTrackerSystem.h 2512 2013-03-22 16:00:16Z spanns $
 #ifndef TRACKERSYSTEM_H
 #define TRACKERSYSTEM_H
 
+// Uncomment as soon as we have a recent version of Eigen from system libraries or elsewhere
+//#define EIGEN2_SUPPORT
+//#include <Eigen/Eigen2Support>
+#include <Eigen/Core>
+
 #include <marlin/AIDAProcessor.h>
 #include "marlin/Processor.h"
-#include <Eigen/Core>
 #include <list>
 #include <vector>
 #include <cmath>
