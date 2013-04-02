@@ -1,16 +1,12 @@
 <?xml version="1.0" encoding="us-ascii"?>
-<!-- ?xml-stylesheet type="text/xsl" href="http://ilcsoft.desy.de/marlin/marlin.xsl"? -->
-<!-- ?xml-stylesheet type="text/xsl" href="marlin.xsl"? -->
-
 
 <!--
 
 ==========================================================================================
-Steering file template for the pysub framework
+Steering file template for the jobsub framework
 
 ==> clusearch-tmp.xml <===
 
-Author: Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
 Version: $Id: clusearch-tmp.xml,v 1.9 2009-08-01 10:41:44 bulgheroni Exp $
 ==========================================================================================
 
@@ -20,122 +16,38 @@ Version: $Id: clusearch-tmp.xml,v 1.9 2009-08-01 10:41:44 bulgheroni Exp $
 
   <execute>
     <processor name="AIDA"/>
-      <@DUTCommentLeft@processor name="LoadPedestal_@DUTSuffix@"/@DUTCommentRight@>
-      <@DUTCommentLeft@processor name="CopyPedestal_@DUTSuffix@"/@DUTCommentRight@>
-      <@DUTCommentLeft@processor name="ApplyPedestal_@DUTSuffix@"/@DUTCommentRight@>
-      <@TELCommentLeft@processor name="Mimosa26EUTelAutoPedestalNoiseProcessor"/@TELCommentRight@>
-      <@UseHotPixelKillerCommentLeft@processor name="LoadHotPixelDB"/@UseHotPixelKillerCommentRight@>
-      <@TELCommentLeft@processor name="Clustering"/@TELCommentRight@>
-      <!-- processor name="Correlator"/ -->
-   <processor name="Save"/>
+      <processor name="Mimosa26EUTelAutoPedestalNoiseProcessor"/>
+      <processor name="LoadHotPixelDB"/>
+      <processor name="Clustering"/>
+      <processor name="Correlator"/>
+      <processor name="Save"/>
+      <processor name="MyEUTelUtilityPrintEventNumber"/>
   </execute>
 
   <global>
-    <parameter name="LCIOInputFiles"> @LcioRawPath@/run@RunNumber@.slcio </parameter>
-    <parameter name="GearXMLFile" value="@GearPath@/@GearFile@"/>
-    <parameter name="MaxRecordNumber" value="100000000"/>
+    <parameter name="LCIOInputFiles"> @LcioRawFolder@/@RunNumber@.slcio </parameter>
+    <parameter name="GearXMLFile" value="@GearFolder@/@GearFile@"/>
+    <parameter name="MaxRecordNumber" value="@MaxRecordNumber@"/>
     <parameter name="SkipNEvents" value="0"/>
     <parameter name="SupressCheck" value="false"/>
-    <parameter name="Verbosity" value="MESSAGE"/>
+    <parameter name="Verbosity" value="@Verbosity@"/>
   </global>
 
   <processor name="AIDA" type="AIDAProcessor">
+    <@LocalVerbosityCommentLeft@ parameter name="Verbosity" type="string" value="AIDAVerbosity"/@LocalVerbosityCommentRight@>
     <!--Processor that handles AIDA files. Creates on directory per processor.  Processors only need to create and fill the histograms, clouds and tuples. Needs to be the first ActiveProcessor-->
     <!-- compression of output file 0: false >0: true (default) -->
     <parameter name="Compress" type="int" value="1"/>
     <!-- filename without extension-->
     <parameter name="FileName" type="string" value=
-    "@HistoPath@/run@RunNumber@-clu@FilenameHyphen@@FilenameSuffix@-histo"/>
+    "@HistoFolder@/@RunNumber@-cluster"/>
     <!-- type of output file xml (default) or root ( only OpenScientist)-->
     <parameter name="FileType" type="string" value="root"/>
   </processor>
 
-  <processor name="LoadPedestal_@DUTSuffix@" type="ConditionsProcessor">
-    <!--ConditionsProcessor provides access to conditions data  transparently from LCIO files or a databases, using LCCD-->
-    <!--Initialization of a conditions database handler-->
-    <!--parameter name="DBCondHandler" type="StringVec"> conditionsName /lccd/myfolder HEAD </parameter-->
-    <!--Initialization of a conditions db file handler-->
-    <!--parameter name="DBFileHandler" type="StringVec"> conditionsName conditions.slcio collectionName </parameter-->
-    <!--Initialization string for conditions database-->
-    <parameter name="DBInit" type="string" value="localhost:lccd_test:calvin:hobbes"/>
-    <!--Initialization of a data file handler-->
-    <!--parameter name="DataFileHandler" type="StringVec" value="conditionsName"/-->
-    <!--Initialization of a simple conditions file handler-->
-    <parameter name="SimpleFileHandler" type="StringVec"> statusDB_@DUTSuffix@ @DBPath@/run@PedeRunNumber@-ped-db.slcio statusDB_@DUTSuffix@ </parameter>
-    <parameter name="SimpleFileHandler" type="StringVec"> noiseDB_@DUTSuffix@ @DBPath@/run@PedeRunNumber@-ped-db.slcio noiseDB_@DUTSuffix@ </parameter>
-    <parameter name="SimpleFileHandler" type="StringVec"> pedestalDB_@DUTSuffix@ @DBPath@/run@PedeRunNumber@-ped-db.slcio pedestalDB_@DUTSuffix@ </parameter>
-  </processor>
-
-
-  <processor name="CopyPedestal_@DUTSuffix@" type="EUTelCopyPedestalProcessor">
-    <!--EUTelCopyPedestalProcessor copies the condition data into local writable collections-->
-    <!--Noise input condition-->
-    <parameter name="NoiseConditionName" type="string" lcioInType="TrackerData"> noiseDB_@DUTSuffix@ </parameter>
-    <!--Pedestal input condition-->
-    <parameter name="PedestalConditionName" type="string" lcioInType="TrackerData"> pedestalDB_@DUTSuffix@ </parameter>
-    <!--Status input condition-->
-    <parameter name="StatusConditionName" type="string" lcioInType="TrackerRawData"> statusDB_@DUTSuffix@ </parameter>
-    <!--Noise local collection-->
-    <parameter name="NoiseCollectionName" type="string" lcioOutType="TrackerData"> noise_@DUTSuffix@ </parameter>
-    <!--Pedestal local collection-->
-    <parameter name="PedestalCollectionName" type="string" lcioOutType="TrackerData"> pedestal_@DUTSuffix@ </parameter>
-    <!--Pixel status collection-->
-    <parameter name="StatusCollectionName" type="string" lcioOutType="TrackerRawData"> status_@DUTSuffix@ </parameter>
-  </processor>
-
-
-
-  <processor name="ApplyPedestal_@DUTSuffix@" type="EUTelCalibrateEventProcessor">
-    <!--EUTelCalibrateEventProcessor subtracts the pedestal value from the input data-->
-
-    <!--
-        INPUT & OUTPUT
-    -->
-
-    <!--Noise from the condition file-->
-    <parameter name="NoiseCollectionName" type="string" lcioInType="TrackerData"> noise_@DUTSuffix@ </parameter>
-    <!--Pedestal from the condition file-->
-    <parameter name="PedestalCollectionName" type="string" lcioInType="TrackerData"> pedestal_@DUTSuffix@ </parameter>
-    <!--Input raw data collection-->
-    <parameter name="RawDataCollectionName" type="string" lcioInType="TrackerRawData"> rawdata_@DUTSuffix@ </parameter>
-    <!--Pixel status from the condition file-->
-    <parameter name="StatusCollectionName" type="string" lcioInType="TrackerRawData"> status_@DUTSuffix@ </parameter>
-    <!--Name of the output calibrated data collection-->
-    <parameter name="CalibratedDataCollectionName" type="string" lcioOutType="TrackerData"> data_@DUTSuffix@ </parameter>
-
-    <!--
-        GENERAL PARAMETERS
-    -->
-    <!--Threshold of pixel SNR for hit rejection-->
-    <parameter name="HitRejectionCut" type="float" value="3.5"/>
-    <!--Flag to switch on the common mode suppression algorithm. 0 -> off, 1 -> full frame,  2 -> row wise-->
-    <parameter name="PerformCommonMode" type="int" value="1"/>
-
-    <!--
-        FULL FRAME PARAMETERS
-    -->
-    <!--Maximum allowed number of rejected pixel per event-->
-    <parameter name="MaxNoOfRejectedPixels" type="int" value="15000"/>
-
-    <!--
-        ROW WISE PARAMETERS
-    -->
-    <!--Maximum allowed number of rejected pixels per row (only with RowWise)-->
-    <parameter name="MaxNoOfRejectedPixelPerRow" type="int" value="25"/>
-    <!--Maximum allowed number of skipped rows (only with RowWise)-->
-    <parameter name="MaxNoOfSkippedRow" type="int" value="15"/>
-
-    <!--
-        HISTOGRAMS
-    -->
-    <!--Flag to switch on (1) or off (0) the detector debug histogram filling-->
-    <parameter name="DebugHistoFilling" type="bool" value="false"/>
-    <!--This is the name of the histogram information file-->
-    <parameter name="HistoInfoFileName" type="string" value="@HistoInfoPath@/@HistoInfo@"/>
-
- </processor>
 
  <processor name="Mimosa26EUTelAutoPedestalNoiseProcessor" type="EUTelAutoPedestalNoiseProcessor">
+  <@LocalVerbosityCommentLeft@ parameter name="Verbosity" type="string" value="Mimosa26EUTelAutoPedestalNoiseProcessorVerbosity"/@LocalVerbosityCommentRight@>
  <!--EUTelAutoPedestalNoiseProcessor produces initial pedestal / noise / status with user provided values-->
   <!--Noise local collection-->
   <parameter name="NoiseCollectionName" type="string" lcioOutType="TrackerData"> m26_noise </parameter>
@@ -160,11 +72,24 @@ Version: $Id: clusearch-tmp.xml,v 1.9 2009-08-01 10:41:44 bulgheroni Exp $
 </processor>
 
   <processor name="LoadHotPixelDB" type="ConditionsProcessor">
-    <parameter name="SimpleFileHandler" type="StringVec"> hotpixel_m26  @DBPath@/run@HotPixelRunNumber@-hotpixel-db.slcio hotpixel_m26 </parameter>
+    <@LocalVerbosityCommentLeft@ parameter name="Verbosity" type="string" value="LoadHotPixelDBVerbosity"/@LocalVerbosityCommentRight@>
+    <!--ConditionsProcessor provides access to conditions data  transparently from LCIO files or a databases, using LCCD-->
+    <!--Initialization of a conditions database handler-->
+    <!--parameter name="DBCondHandler" type="StringVec"> conditionsName /lccd/myfolder HEAD </parameter-->
+    <!--Initialization of a conditions db file handler-->
+    <!--parameter name="DBFileHandler" type="StringVec"> conditionsName conditions.slcio collectionName </parameter-->
+    <!--Initialization string for conditions database-->
+    <parameter name="DBInit" type="string" value="localhost:lccd_test:calvin:hobbes"/>
+    <!--Initialization of a data file handler-->
+    <!--parameter name="DataFileHandler" type="StringVec" value="conditionsName"/-->
+    <!--Initialization of a simple conditions file handler-->
+    <!-- suppress only the Mimosa26 pixels --> 
+    <parameter name="SimpleFileHandler" type="StringVec"> hotpixel_m26  @DBFolder@/@HotPixelRunNumber@-hotpixel-db.slcio hotpixel_m26 </parameter>
   </processor>
 
 
   <processor name="Clustering" type="EUTelClusteringProcessor">
+    <@LocalVerbosityCommentLeft@ parameter name="Verbosity" type="string" value="ClusteringVerbosity"/@LocalVerbosityCommentRight@>
     <!--EUTelClusteringProcessor is looking for clusters into a calibrated pixel matrix.-->
    
     <parameter name="HotPixelCollectionName" type="string" value="hotpixel_m26" />
@@ -197,7 +122,7 @@ Version: $Id: clusearch-tmp.xml,v 1.9 2009-08-01 10:41:44 bulgheroni Exp $
         -> SparseCluster2: for cluster in ZS frame with better performance
         -> FixedFrame: for cluster with a given size
         -> DFixedFrame: for cluster with a given size-->
-    <parameter name="ZSClusteringAlgo" type="string" value="SparseCluster2"/>
+    <parameter name="ZSClusteringAlgo" type="string" value="@ClusteringMethod@"/>
 
 
     <!--
@@ -233,15 +158,15 @@ Version: $Id: clusearch-tmp.xml,v 1.9 2009-08-01 10:41:44 bulgheroni Exp $
     <parameter name="SparseSeedCut" type="float" value="0.0"/>
     <!--Minimum distance between sparsified pixel ( touching == sqrt(2)) -->
     <!-- carefull with this one! see comments above. -->
-    <parameter name="SparseMinDistance" type="float" value="0"/>
+    <parameter name="SparseMinDistance" type="float" value="@SparseClusteringMinDistance@"/>
 
     <!--
         HISTOGRAMMING
     -->
     <!--Switch on or off the histogram filling-->
-    <parameter name="HistogramFilling" type="bool" value="true"/>
+    <parameter name="HistogramFilling" type="bool" value="@FillHistograms@"/>
     <!--This is the name of the histogram information file-->
-    <parameter name="HistoInfoFileName" type="string" value="@HistoInfoPath@/@HistoInfo@"/>
+    <parameter name="HistoInfoFileName" type="string" value="@HistoInfoFolder@/@HistoInfo@"/>
     <!--The list of cluster N to be filled.For example 7 means filling the cluster spectra with the 7 most significant pixels-->
     <parameter name="ClusterN" type="IntVec" value="4 6 8 9"/>
     <!--The list of cluster NxN to be filled.For example 3 means filling the 3x3 histogram spectrum-->
@@ -251,6 +176,7 @@ Version: $Id: clusearch-tmp.xml,v 1.9 2009-08-01 10:41:44 bulgheroni Exp $
 
 
   <processor name="HotPixelKiller" type="EUTelHotPixelKiller">
+    <@LocalVerbosityCommentLeft@ parameter name="Verbosity" type="string" value="HotPixelKillerVerbosity"/@LocalVerbosityCommentRight@>
     <!--EUTelHotPixelKiller periodically check for pixel singing loud too often and remove them from the analysis-->
     <!--Pixel status collection-->
     <parameter name="StatusCollectionName" type="string" lcioInType="TrackerRawData"> m26_status </parameter>
@@ -263,33 +189,28 @@ Version: $Id: clusearch-tmp.xml,v 1.9 2009-08-01 10:41:44 bulgheroni Exp $
     <parameter name="TotalNoOfCycle" type="int" value="0"/>
   </processor>
 
-
   <processor name="Correlator" type="EUTelCorrelator">
+    <@LocalVerbosityCommentLeft@ parameter name="Verbosity" type="string" value="CorrelatorVerbosity"/@LocalVerbosityCommentRight@>
     <!--EUTelCorrelator fills histograms with correlation plots-->
     <!--Cluster (pulse) collection name-->
     <parameter name="InputClusterCollections" type="StringVec" > cluster_m26  </parameter>
-    <parameter name="HotPixelCollectionName" type="string" value="hotpixel_m26" />
+    <!--Hit collection name-->
+    <parameter name="InputHitCollectionName" type="string" lcioInType="TrackerHit"> hit </parameter>
     <!-- -->
-    <parameter name="ClusterChargeMinimum" type="int" value="1"/>
+    <parameter name="ClusterChargeMinimum" type="int" value="2"/>
     <!-- -->
-    <parameter name="MinNumberOfCorrelatedHits" type="int" value="5"/>
-    <parameter name="Events"  type="int" value="9999"/>
-
-    <!--Residual cuts along both size in microns-->
-    <parameter name="ResidualsXMax" type="FloatVec">  20.0  20.0  20.0       20.0  20.0  20.0          </parameter>
-    <parameter name="ResidualsXMin" type="FloatVec"> -20.0 -20.0 -20.0      -20.0 -20.0 -20.0          </parameter>
-    <parameter name="ResidualsYMax" type="FloatVec">  20.0  20.0  20.0       20.0  20.0  20.0          </parameter>
-    <parameter name="ResidualsYMin" type="FloatVec"> -20.0 -20.0 -20.0      -20.0 -20.0 -20.0          </parameter>
-
-  </processor>
+    <parameter name="Events" type="int" value="@MaxRecordNumber@"/>
+    <!-- -->
+    <parameter name="OffsetDBFile" type="string"> @DBFolder@/@RunNumber@-offset-db.slcio </parameter>
+ </processor>
 
 
   <processor name="Save" type="EUTelOutputProcessor">
+    <@LocalVerbosityCommentLeft@ parameter name="Verbosity" type="string" value="SaveVerbosity"/@LocalVerbosityCommentRight@>
     <!--Writes the current event to the specified LCIO outputfile. Eventually it adds a EORE at the of the file if it was missing Needs to be the last ActiveProcessor.-->
     <!--drops the named collections from the event-->
     <parameter name="DropCollectionNames" type="StringVec"> 
-           rawdata status noise pedestal data zsdata 
-           rawdata_@DUTSuffix@ status_@DUTSuffix@  noise_@DUTSuffix@  pedestal_@DUTSuffix@  data_@DUTSuffix@ zsdata_@DUTSuffix@ 
+           rawdata status noise pedestal data zsdata            
     </parameter>
     <!--drops all collections of the given type from the event-->
     <!--parameter name="DropCollectionTypes" type="StringVec"> SimTrackerHit SimCalorimeterHit </parameter-->
@@ -298,7 +219,7 @@ Version: $Id: clusearch-tmp.xml,v 1.9 2009-08-01 10:41:44 bulgheroni Exp $
     <!--force keep of the named collections - overrules DropCollectionTypes (and DropCollectionNames)-->
     <!--parameter name="KeepCollectionNames" type="StringVec" value="MyPreciousSimTrackerHits"/-->
     <!-- name of output file -->
-    <parameter name="LCIOOutputFile" type="string" value="@ResultPath@/run@RunNumber@-clu@FilenameHyphen@@FilenameSuffix@-p@PedeRunNumber@.slcio"/>
+    <parameter name="LCIOOutputFile" type="string" value="@ResultsFolder@/@RunNumber@-cluster.slcio"/>
     <!--write mode for output file:  WRITE_APPEND or WRITE_NEW-->
     <parameter name="LCIOWriteMode" type="string" value="WRITE_NEW"/>
     <!--Set it to true to remove intermediate EORE in merged runs-->
@@ -306,5 +227,16 @@ Version: $Id: clusearch-tmp.xml,v 1.9 2009-08-01 10:41:44 bulgheroni Exp $
     <!--will split output file if size in kB exceeds given value - doesn't work with APPEND and NEW-->
     <!--parameter name="SplitFileSizekB" type="int" value="500000"/-->
   </processor>
+
+<processor name="MyEUTelUtilityPrintEventNumber" type="EUTelUtilityPrintEventNumber">
+    <@LocalVerbosityCommentLeft@ parameter name="Verbosity" type="string" value="MyEUTelUtilityPrintEventNumberVerbosity"/@LocalVerbosityCommentRight@>
+ <!--EUTelUtilityPrintEventNumber prints event number to screen depending on the verbosity level-->
+  <!--Print event number for every n-th event-->
+  <parameter name="EveryNEvents" type="int" value="1000"/>
+  <!--verbosity level of this processor ("DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT")-->
+  <!--parameter name="Verbosity" type="string" value=""/-->
+  <!--print the event timestamp as read from LCIO-->
+  <!--parameter name="printTimestamp" type="bool" value="false"/-->
+</processor>
 
 </marlin>

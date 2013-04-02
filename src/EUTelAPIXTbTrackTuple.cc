@@ -1,4 +1,4 @@
-// Version: $Id: EUTelAPIXTbTrackTuple.cc 2489 2013-03-21 12:16:02Z hamnett $
+// Version: $Id: EUTelAPIXTbTrackTuple.cc 2517 2013-03-27 08:14:36Z hamnett $
 // eutelescope inlcudes
 #include "EUTelAPIXTbTrackTuple.h"
 #include "EUTelVirtualCluster.h"
@@ -322,7 +322,7 @@ int EUTelAPIXTbTrackTuple::readClusters( std::string colName, LCEvent* event ){
       clusterID = telCluster->getClusterID();
       delete telCluster;
     } else {
-      message<WARNING> ( log() << "Unknown cluster type: " << type );
+      message<WARNING> ( log() << "Unknown cluster type: " << static_cast< int >(type) );
       sensorID = -1;
     }
     if(sensorID > 0){
