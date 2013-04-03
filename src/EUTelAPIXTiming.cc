@@ -1,4 +1,4 @@
-// Version: $Id: EUTelAPIXTiming.cc 2285 2013-01-18 13:46:44Z hperrey $
+// Version: $Id: EUTelAPIXTiming.cc 2524 2013-04-03 07:00:56Z hamnett $
 // Author:  Georg Troska <mailto: georg.troska@uni-dortmund.de>
 
 
@@ -68,7 +68,7 @@ void EUTelAPIXTiming::print(std::ostream& os) const {
   }
   os << endl;
   int width = 20;
-  os << setw(width) << setiosflags(ios::left) << "Type: "     << _type << endl
+  os << setw(width) << setiosflags(ios::left) << "Type: "     << static_cast< int >(_type) << endl
      << setw(width) << "Elements: " << _noOfElements << endl
      << setw(width) << "Realtime (sec): "  << _realtimeSec << endl
      << setw(width) << "Realtime (ns): "  << _realtimeNs << endl

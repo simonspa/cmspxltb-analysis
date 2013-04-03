@@ -1,4 +1,4 @@
-// Version: $Id: EUTelAPIXKalman.cc 2476 2013-03-17 18:07:16Z hamnett $
+// Version: $Id: EUTelAPIXKalman.cc 2529 2013-04-03 10:03:40Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -86,7 +86,72 @@ std::string EUTelAPIXKalman::_residualYLocalname     = "ResidualY";
 
 #endif
 
-EUTelAPIXKalman::EUTelAPIXKalman () : Processor("EUTelAPIXKalman") {
+EUTelAPIXKalman::EUTelAPIXKalman () 
+: Processor("EUTelAPIXKalman"),
+  cutAngleX(0),
+  cutAngleY(0),
+  cutChi2(0),
+  cutResids(0),
+  cutInTime(0),
+  _hitCollectionName(),
+  _trackCollectionName(""),
+  _fittrackvec(NULL),
+  _excludePlanes(),
+  _fixedPlanes(),
+  _fixedTranslations(),
+  _fixedZRotations(),
+  _fixedScales(),
+  _inTimeCheck(),
+  _fixedX(false),
+  _fixedY(false),
+  _binaryFilename(""),
+  _telescopeResolution(),
+  _useResidualCuts(false),
+  _residualsXMin(),
+  _residualsYMin(),
+  _residualsXMax(),
+  _residualsYMax(),
+  _shiftsX(),
+  _shiftsY(),
+  _scalesX(),
+  _scalesY(),
+  _generatePedeSteerfile(0),
+  _pedeSteerfileName(""),
+  _useHitResol(false),
+  _runPede(false),
+  _addToLCIO(false),
+  _usePedeUserStartValues(false),
+  _doScatter(false),
+  _pedeUserStartValuesX(),
+  _pedeUserStartValuesY(),
+  _pedeUserStartValuesGamma(),
+  _alignmentConstantLCIOFile(""),
+  _alignmentConstantCollectionName(""),
+  _normalizedResidualsMax(0.0),
+  _eBeam(0.0),
+  _nSkipMax(0),
+  _minDxDz(0.0),
+  _maxDxDz(0.0),
+  _minDyDz(0.0),
+  _maxDyDz(0.0),
+  _maxChi2(0.0),
+  _fitter(NULL),
+  _zSort(),
+  _planeHits(),
+  _checkInTime(false),
+  _nTracks(0),
+  _expectedTracks(0),
+  _iRun(0),
+  _iEvt(0),
+  _nMilleDataPoints(0),
+  _nMilleTracks(0),
+  _mille(NULL),
+  _siPlanesParameters(NULL),
+  _siPlanesLayerLayout(NULL),
+  _aidaHistoMap(),
+  _siPlaneZPosition(),
+  _histogramSwitch(false)
+ {
   _description = "This processor preforms track fitting. The tracks can be used for obtaining alignment using the Millepede program, or as final track fits.";
 
   // input collection
