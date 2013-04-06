@@ -1,4 +1,4 @@
-// Version: $Id: EUTelX0Processor.h 2464 2013-03-14 09:10:06Z hamnett $
+// Version: $Id: EUTelX0Processor.h 2535 2013-04-06 13:48:32Z spanns $
 // Contact: Phillip Hamnett (phillip.hamnett@desy.de)
 /*
  * This source code is part of the Eutelescope package of Marlin.
@@ -236,6 +236,9 @@ private:
   std::map<std::pair< Double_t, Double_t > , std::vector< TVector3 > > _residualProfile; //TODO(Phillip Hamnett): Can this be joined with _residual? //Used as above but for created a profile histogram
   int _runNumber;
   std::string _trackCollectionName;
+
+  std::vector< TVector3* > getHitsFromTrack(Track *track);
+  void singlePointResolution(EVENT::Track*);
 };
 //! A global instance of the processor
 EUTelX0Processor gEUTelX0Processor;
