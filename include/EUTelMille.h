@@ -1,4 +1,4 @@
-// Version: $Id: EUTelMille.h 2360 2013-02-08 16:44:47Z diont $
+// Version: $Id: EUTelMille.h 2537 2013-04-09 12:29:00Z spanns $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -433,10 +433,10 @@ namespace eutelescope {
     std::string _binaryFilename;
 
     float _telescopeResolution;
-    int _onlySingleHitEvents;
-    int _onlySingleTrackEvents;
+    bool _onlySingleHitEvents;
+    bool _onlySingleTrackEvents;
     int _alignMode;
-    int _useResidualCuts;
+    bool _useResidualCuts;
 
     FloatVec _residualsXMin;
     FloatVec _residualsYMin;
@@ -452,7 +452,7 @@ namespace eutelescope {
 
     int _generatePedeSteerfile;
     std::string _pedeSteerfileName;
-    int _runPede;
+    bool _runPede;
     int _usePedeUserStartValues;
     FloatVec _pedeUserStartValuesX;
     FloatVec _pedeUserStartValuesY;
