@@ -1,8 +1,4 @@
-// Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Author Loretta Negrini, Univ. Insubria <mailto:loryneg@gmail.com>
-// Author Silvia Bonfanti, Univ. Insubria <mailto:silviafisica@gmail.com>
-// Author Yulia Furletova, Uni-Bonn <mailto:yulia@mail.cern.ch>
-// Version $Id: EUTelNativeReader.cc 2497 2013-03-21 23:55:56Z spanns $
+// Version $Id: EUTelNativeReader.cc 2541 2013-04-10 09:25:48Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -175,8 +171,8 @@ void EUTelNativeReader::readDataSource(int numEvents) {
 
     if ( eudaqEvent.IsBORE() ) {
 
-      streamlog_out( DEBUG4 ) << "Found a BORE event " << endl;
-      streamlog_out( DEBUG4 ) << eudaqEvent << endl;
+      streamlog_out( WARNING9 ) << "Found another BORE event: This is a strange case but the event will be processed anyway" << endl;
+      streamlog_out( WARNING9 ) << eudaqEvent << endl;
 
       // this is a very strange case, because there should be one and
       // one only BORE in a run and this should be processed already
