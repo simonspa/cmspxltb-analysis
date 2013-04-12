@@ -1,4 +1,4 @@
-/* $Id: EUTelPStream.h 2488 2013-03-21 10:45:22Z hamnett $ */
+/* $Id: EUTelPStream.h 2548 2013-04-12 13:51:41Z spanns $ */
 /*
 PStreams - POSIX Process I/O for C++
 Copyright (C) 2001-2012 Jonathan Wakely
@@ -50,7 +50,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>     // for pipe() fork() exec() and filedes functions
 #include <signal.h>     // for kill()
 #include <fcntl.h>      // for fcntl()
-#if REDI_EVISCERATE_PSTREAMS
+#ifdef REDI_EVISCERATE_PSTREAMS
 # include <stdio.h>     // for FILE, fdopen()
 #endif
 
@@ -156,7 +156,7 @@ namespace redi
       bool
       exited();
 
-#if REDI_EVISCERATE_PSTREAMS
+#ifdef REDI_EVISCERATE_PSTREAMS
       /// Obtain FILE pointers for each of the process' standard streams.
       std::size_t
       fopen(FILE*& in, FILE*& out, FILE*& err);
@@ -316,7 +316,7 @@ namespace redi
       streambuf_type*
       rdbuf() const;
 
-#if REDI_EVISCERATE_PSTREAMS
+#ifdef REDI_EVISCERATE_PSTREAMS
       /// Obtain FILE pointers for each of the process' standard streams.
       std::size_t
       fopen(FILE*& in, FILE*& out, FILE*& err);
@@ -2005,7 +2005,7 @@ namespace redi
     }
 
 
-#if REDI_EVISCERATE_PSTREAMS
+#ifdef REDI_EVISCERATE_PSTREAMS
   /**
    * @def REDI_EVISCERATE_PSTREAMS
    * If this macro has a non-zero value then certain internals of the
