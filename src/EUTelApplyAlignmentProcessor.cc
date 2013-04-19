@@ -1,4 +1,4 @@
-// Version $Id: EUTelApplyAlignmentProcessor.cc 2423 2013-02-21 14:21:50Z hamnett $
+// Version $Id: EUTelApplyAlignmentProcessor.cc 2555 2013-04-17 16:15:18Z spanns $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -493,13 +493,6 @@ void EUTelApplyAlignmentProcessor::processEvent (LCEvent * event) {
     else
     {    
  
-        if ( _fevent )
-            streamlog_out ( MESSAGE5 ) << "Processing run "  
-                << setw(6) << setiosflags(ios::right) << setfill('0')  << event->getRunNumber()
-                << ". Number of the defined alignment collection is " << _alignmentCollectionNames.size()
-                << endl;
-        
-
   // ----------------------------------------------------------------------- //
   // check input / output collections
 

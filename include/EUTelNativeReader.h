@@ -87,7 +87,7 @@ namespace eutelescope {
    *   @author  Loretta Negrini, Univ. Insubria <mailto:loryneg@gmail.com>
    *   @author  Silvia Bonfanti, Univ. Insubria <mailto:silviafisica@gmail.com>
    *   @author  Yulia Furletova, Uni-Bonn <mailto:yulia@mail.cern.ch>
-   *   @version $Id: EUTelNativeReader.h 2359 2013-02-08 12:20:52Z hamnett $
+   *   @version $Id: EUTelNativeReader.h 2552 2013-04-15 15:47:08Z diont $
    *
    */
   class EUTelNativeReader : public marlin::DataSourceProcessor    {
@@ -214,7 +214,7 @@ namespace eutelescope {
   private:
     // from here below only private data members
 
-    //! Vector of detectors readout by the EUDRBProducer
+    //! Vector of detectors readout by the DEPFETProducer
     std::vector<EUTelPixelDetector * > _depfetDetectors;
 
     //! Vector of detectors readout by the EUDRBProducer

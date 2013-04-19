@@ -1,4 +1,4 @@
-// Version: $Id: CMSPixelReader.cc 2489 2013-03-21 12:16:02Z hamnett $
+// Version: $Id: CMSPixelReader.cc 2557 2013-04-19 13:16:02Z spanns $
 /*========================================================================*/
 /*          CMSPixel file converter (RAW->LCIO)                           */
 /*          Author: Simon Spannagel (s.spannagel@cern.ch)                 */
@@ -225,7 +225,7 @@ void CMSPixelReader::readDataSource (int Ntrig)
             runHeader->setMinY(IntVec(_noOfROC, 0));
             runHeader->setMaxY(IntVec(_noOfROC, _noOfYPixel - 1));
 
-	    //            runHeader->lcRunHeader()->setDetectorName("EUTelescope");
+	    runHeader->lcRunHeader()->setDetectorName("CMSPixelTelescope");
 
             // Process the run header:
             ProcessorMgr::instance ()->processRunHeader ( static_cast<lcio::LCRunHeader*> ( lcHeader.release()) );
@@ -317,7 +317,6 @@ void CMSPixelReader::readDataSource (int Ntrig)
         } while (iROC<event_data.size());
 
 
-        if(_debugSwitch > 0 || eventNumber%1000 == 0) streamlog_out ( MESSAGE5 ) << "Write event " << eventNumber << endl;
         // Start constructing current event:
         event = new EUTelEventImpl();
         event->setDetectorName("CMSPixelTelescope");

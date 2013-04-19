@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelHotPixelKiller.cc 2497 2013-03-21 23:55:56Z spanns $
+// Version $Id: EUTelHotPixelKiller.cc 2549 2013-04-13 12:31:58Z hperrey $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -354,6 +354,7 @@ void EUTelHotPixelKiller::HotPixelFinder(EUTelEventImpl  *evt)
             else
             {
                 status->adcValues()[ _hitIndexMapVec[iDetector][ decoded_XY_index]  ] = EUTELESCOPE::HITPIXEL ;
+		delete sparsePixel;
             }
         }
     }    

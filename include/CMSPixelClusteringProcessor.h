@@ -1,4 +1,4 @@
-// Version: $Id: CMSPixelClusteringProcessor.h 2285 2013-01-18 13:46:44Z hperrey $
+// Version: $Id: CMSPixelClusteringProcessor.h 2557 2013-04-19 13:16:02Z spanns $
 /*========================================================================*/
 /*          CMSPixel ClusteringProcessor (clustering of zs data)          */
 /*          Author: Simon Spannagel                                       */
@@ -66,6 +66,9 @@ namespace eutelescope {
     
     CMSPixelClusteringProcessor();
     ~CMSPixelClusteringProcessor() { };
+    CMSPixelClusteringProcessor(const CMSPixelClusteringProcessor&);
+
+    void operator=(const CMSPixelClusteringProcessor&);
 
     virtual const std::string & name() const { return Processor::name() ; }
     virtual void init ();
