@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelHotPixelKiller.cc 2549 2013-04-13 12:31:58Z hperrey $
+// Version $Id: EUTelHotPixelKiller.cc 2584 2013-04-30 06:42:50Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -839,11 +839,14 @@ void EUTelHotPixelKiller::bookAndFillHistos()
     {
       for (int xPixel = _minX[_sensorIDVec.at( iDetector)]; xPixel <= _maxX[_sensorIDVec.at( iDetector)]; xPixel++) 
       {
-          if( _firingFreqVec.size() >0 && _firingFreqVec[iDetector].size() >0 && _firingFreqVec[ iDetector ][ iPixel ] > 0 )
-          {
-              firing2DHisto->fill(xPixel, yPixel, _firingFreqVec[ iDetector ][ iPixel ] );
-              firing1DHisto->fill( _firingFreqVec[ iDetector ][ iPixel ] / ( static_cast< double >( _noOfEventPerCycle ) ));
-              ++iPixel;
+          if( _firingFreqVec.size() > 0){
+            if(_firingFreqVec[ iDetector ].size() > 0){
+              if(_firingFreqVec[ iDetector ][ iPixel ] > 0){
+                firing2DHisto->fill(xPixel, yPixel, _firingFreqVec[ iDetector ][ iPixel ] );
+                firing1DHisto->fill( _firingFreqVec[ iDetector ][ iPixel ] / ( static_cast< double >( _noOfEventPerCycle ) ));
+                ++iPixel;
+              }
+            }
           }
       }
     }

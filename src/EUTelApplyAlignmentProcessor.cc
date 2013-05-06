@@ -1,4 +1,4 @@
-// Version $Id: EUTelApplyAlignmentProcessor.cc 2555 2013-04-17 16:15:18Z spanns $
+// Version $Id: EUTelApplyAlignmentProcessor.cc 2587 2013-05-06 08:16:55Z hperrey $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -182,16 +182,16 @@ EUTelApplyAlignmentProcessor::EUTelApplyAlignmentProcessor ()
   // now the optional parameters
   registerProcessorParameter ("CorrectionMethod",
                               "Available methods are:\n"
-                              " 0 --> shift only \n"
-                              " 1 --> rotation first \n"
-                              " 2 --> shift first ",
+                              " 0 -> shift only \n"
+                              " 1 -> rotation first \n"
+                              " 2 -> shift first ",
                               _correctionMethod, static_cast<int > (1));
 
   // now the optional parameters
   registerProcessorParameter ("ApplyAlignmentDirection",
                               "Available directinos are:\n"
-                              " 0 --> direct  \n"
-                              " 1 --> reverse ",
+                              " 0 -> direct  \n"
+                              " 1 -> reverse ",
                               _applyAlignmentDirection, static_cast<int > (0));
 
 
@@ -629,13 +629,13 @@ void EUTelApplyAlignmentProcessor::ApplyGear6D( LCEvent *event)
 {
  
 
-  if ( _iEvt % 1000 == 0 )
-    streamlog_out ( MESSAGE5 ) << "Processing event  (ApplyGear6D) "
+  if ( _iEvt % 1000 == 0 ){
+    streamlog_out ( DEBUG5 ) << "Processing event  (ApplyGear6D) "
                                << setw(6) << setiosflags(ios::right) << event->getEventNumber() << " in run "
                                << setw(6) << setiosflags(ios::right) << setfill('0')  << event->getRunNumber()
                                << setfill(' ')
                                << " (Total = " << setw(10) << _iEvt << ")" << resetiosflags(ios::left) << endl;
-//++_iEvt;
+  }
 
 
   EUTelEventImpl * evt = static_cast<EUTelEventImpl*> (event);
@@ -821,13 +821,14 @@ void EUTelApplyAlignmentProcessor::ApplyGear6D( LCEvent *event)
 void EUTelApplyAlignmentProcessor::RevertGear6D( LCEvent *event) 
 {
  
-  if ( _iEvt % 1000 == 0 )
+  if ( _iEvt % 1000 == 0 ){
     streamlog_out ( MESSAGE5 ) << "Processing event  (RevertGear6D) "
                                << setw(6) << setiosflags(ios::right) << event->getEventNumber() << " in run "
                                << setw(6) << setiosflags(ios::right) << setfill('0')  << event->getRunNumber()
                                << setfill(' ')
                                << " (Total = " << setw(10) << _iEvt << ")" << resetiosflags(ios::left) << endl;
-//  ++_iEvt;
+  }
+
 
 
   EUTelEventImpl * evt = static_cast<EUTelEventImpl*> (event);
@@ -1088,13 +1089,13 @@ void EUTelApplyAlignmentProcessor::RevertGear6D( LCEvent *event)
 
 void EUTelApplyAlignmentProcessor::Direct(LCEvent *event) {
 
-  if ( _iEvt % 1000 == 0 )
-    streamlog_out ( MESSAGE5 ) << "Processing event  (ApplyAlignment Direct) "
+  if ( _iEvt % 1000 == 0 ){
+    streamlog_out ( DEBUG5 ) << "Processing event  (ApplyAlignment Direct) "
                                << setw(6) << setiosflags(ios::right) << event->getEventNumber() << " in run "
                                << setw(6) << setiosflags(ios::right) << setfill('0')  << event->getRunNumber()
                                << setfill(' ')
                                << " (Total = " << setw(10) << _iEvt << ")" << resetiosflags(ios::left) << endl;
-//  ++_iEvt;
+  }
 
   EUTelEventImpl * evt = static_cast<EUTelEventImpl*> (event);
 
@@ -1441,13 +1442,13 @@ void EUTelApplyAlignmentProcessor::Direct(LCEvent *event) {
 
 void EUTelApplyAlignmentProcessor::Reverse(LCEvent *event) {
  
-    if ( _iEvt % 1000 == 0 )
-        streamlog_out ( MESSAGE4 ) << "Processing event (ApplyAlignment Reverse) "
+  if ( _iEvt % 1000 == 0 ){
+        streamlog_out ( DEBUG5 ) << "Processing event (ApplyAlignment Reverse) "
                                << setw(6) << setiosflags(ios::right) << event->getEventNumber() << " in run "
                                << setw(6) << setiosflags(ios::right) << setfill('0')  << event->getRunNumber()
                                << setfill(' ')
                                << " (Total = " << setw(10) << _iEvt << ")" << resetiosflags(ios::left) << endl;
-//    ++_iEvt;
+  }
 
 
     EUTelEventImpl * evt = static_cast<EUTelEventImpl*> (event);

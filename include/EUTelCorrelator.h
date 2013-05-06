@@ -74,7 +74,7 @@ namespace eutelescope {
    *
    *  @author Silvia Bonfanti, Uni. Insubria  <mailto:silviafisica@gmail.com>
    *  @author Loretta Negrini, Uni. Insubria  <mailto:loryneg@gmail.com>
-   *  @version $Id: EUTelCorrelator.h 2285 2013-01-18 13:46:44Z hperrey $
+   *  @version $Id: EUTelCorrelator.h 2577 2013-04-29 12:19:30Z hperrey $
    *
    */
 
@@ -156,13 +156,6 @@ namespace eutelescope {
 
     //! set the plane you would like to use as a reference/strating point for correlation plots
     int _fixedPlaneID;
-
-    //! Input cluster collection name
-    /*! This is the name of the collection containing the input clusters
-     */
-    std::string _inputClusterCollectionName;
-    std::string _InternalInputClusterCollectionName;
-    std::string _ExternalInputClusterCollectionName;
 
     //! vector of correlation band cuts in X (upper limit)
     std::vector< float  > _residualsXMax;

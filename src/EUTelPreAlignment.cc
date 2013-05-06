@@ -1,4 +1,4 @@
-// Version: $Id: EUTelPreAlignment.cc 2492 2013-03-21 18:30:54Z spanns $
+// Version: $Id: EUTelPreAlignment.cc 2562 2013-04-23 06:49:42Z hamnett $
 #ifdef USE_GEAR
 // eutelescope includes ".h"
 #include "EUTelPreAlignment.h"
@@ -363,8 +363,8 @@ void EUTelPreAlign::processEvent (LCEvent * event) {
             prealign[ii]->addPoint( hitX[ii], hitY[ii] );
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
               if(_fillHistos) {
-//                (dynamic_cast<AIDA::IHistogram1D*> (_hitXCorr[prealign[ii]->getIden()]))->fill( hitX[ii] );
-//                (dynamic_cast<AIDA::IHistogram1D*> (_hitYCorr[prealign[ii]->getIden()]))->fill( hitY[ii] );
+                (dynamic_cast<AIDA::IHistogram1D*> (_hitXCorr[prealign[ii]->getIden()]))->fill( hitX[ii] );
+                (dynamic_cast<AIDA::IHistogram1D*> (_hitYCorr[prealign[ii]->getIden()]))->fill( hitY[ii] );
               }
 #endif
          } 

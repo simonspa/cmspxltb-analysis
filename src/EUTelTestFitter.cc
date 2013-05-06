@@ -1,4 +1,4 @@
-// Version: $Id: EUTelTestFitter.cc 2558 2013-04-19 14:30:14Z spanns $
+// Version: $Id: EUTelTestFitter.cc 2582 2013-04-29 15:08:33Z hperrey $
         
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -1377,7 +1377,9 @@ void EUTelTestFitter::processEvent( LCEvent * event ) {
 #endif
 
       // before returning clean up the memory
-
+      delete fittrackvec;
+      delete fitpointvec;
+      delete corrpointvec;
       delete [] planeHitID;
       delete [] hitPlane;
       delete [] hitFits;
@@ -1722,6 +1724,9 @@ if(jhit>=0){
 
       // before throwing the exception I should clean up the
       // memory...
+      delete fittrackvec;
+      delete fitpointvec;
+      delete corrpointvec;
       delete [] planeHitID;
       delete [] hitPlane;
       delete [] hitFits;

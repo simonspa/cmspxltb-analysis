@@ -87,7 +87,7 @@ namespace eutelescope {
    *   @author  Loretta Negrini, Univ. Insubria <mailto:loryneg@gmail.com>
    *   @author  Silvia Bonfanti, Univ. Insubria <mailto:silviafisica@gmail.com>
    *   @author  Yulia Furletova, Uni-Bonn <mailto:yulia@mail.cern.ch>
-   *   @version $Id: EUTelNativeReader.h 2552 2013-04-15 15:47:08Z diont $
+   *   @version $Id: EUTelNativeReader.h 2585 2013-04-30 13:15:35Z hamnett $
    *
    */
   class EUTelNativeReader : public marlin::DataSourceProcessor    {
