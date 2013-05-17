@@ -1,4 +1,4 @@
-// Version $Id: EUTelNativeReader.cc 2585 2013-04-30 13:15:35Z hamnett $
+// Version $Id: EUTelNativeReader.cc 2603 2013-05-13 08:25:41Z diont $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -151,7 +151,8 @@ void EUTelNativeReader::readDataSource(int numEvents) {
   }
   catch(...){
     streamlog_out( ERROR5 ) << "eudaq::FileReader could not read the input file ' " << _fileName << " '. Please verify that the path and file name are correct." << endl;
-    exit(1);
+//    exit(1);
+     throw ParseException("Problems with reading file " + _fileName );
   }
 
   if ( reader->Event().IsBORE() ) {

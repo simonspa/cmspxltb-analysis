@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelAutoPedestalNoiseProcessor.cc 2495 2013-03-21 19:00:36Z spanns $
+// Version $Id: EUTelAutoPedestalNoiseProcessor.cc 2613 2013-05-15 10:57:12Z spanns $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -36,10 +36,24 @@ using namespace eutelescope;
 
 
 
-EUTelAutoPedestalNoiseProcessor::EUTelAutoPedestalNoiseProcessor () : Processor("EUTelAutoPedestalNoiseProcessor"),
-                                                                      _pedestalCollectionVec(NULL),
-                                                                      _noiseCollectionVec(NULL),
-                                                                      _statusCollectionVec(NULL) {
+EUTelAutoPedestalNoiseProcessor::EUTelAutoPedestalNoiseProcessor ()
+ : Processor("EUTelAutoPedestalNoiseProcessor"),
+   _pedestalCollectionName(""),
+   _noiseCollectionName(""),
+   _statusCollectionName(""),
+   _initPedestal(),
+   _initNoise(),
+   _iRun(0),
+   _iEvt(0),
+   _pedestalCollectionVec(NULL),
+   _noiseCollectionVec(NULL),
+   _statusCollectionVec(NULL),
+   _minX(0),
+   _maxX(0),
+   _minY(0),
+   _maxY(0),
+   _sensorIDVec()
+{
 
   // modify processor description
   _description =

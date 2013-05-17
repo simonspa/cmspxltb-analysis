@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelEventViewer.cc 2488 2013-03-21 10:45:22Z hamnett $
+// Version $Id: EUTelEventViewer.cc 2611 2013-05-15 10:03:15Z spanns $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -55,7 +55,18 @@ using namespace marlin ;
 using namespace eutelescope;
 
 
-EUTelEventViewer::EUTelEventViewer() : Processor("EUTelEventViewer") {
+EUTelEventViewer::EUTelEventViewer()
+ : Processor("EUTelEventViewer"),
+   _trackerHitCollectionNameVec(),
+   _trackCollectionNameVec(),
+   _alignmentCollectionName(""),
+   _layerTrackerHit(-1),
+   _layerTrack(-1),
+   _waitForKeyboard(true),
+   _autoForwardDelay(4.0),
+   _detModel(99999),
+   _iEvt(0)
+{
 
   _description = "Event display" ;
 

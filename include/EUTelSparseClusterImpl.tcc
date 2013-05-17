@@ -1,4 +1,4 @@
-// Version: $Id: EUTelSparseClusterImpl.tcc 2369 2013-02-13 12:36:31Z hamnett $
+// Version: $Id: EUTelSparseClusterImpl.tcc 2606 2013-05-13 17:42:43Z hperrey $
 // -*- mode: c++; mode: auto-fill; mode: flyspell-prog; -*-
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -17,15 +17,19 @@ using namespace EVENT;
 namespace eutelescope {
 
   template<class PixelType>
-  EUTelSparseClusterImpl<PixelType>::EUTelSparseClusterImpl(IMPL::TrackerDataImpl * data) : EUTelVirtualCluster(data) {
+  EUTelSparseClusterImpl<PixelType>::EUTelSparseClusterImpl(IMPL::TrackerDataImpl * data) : 
+    EUTelVirtualCluster(data),
+    _nElement(0),
+    _type(kUnknownPixelType),
+    _noiseValues(),
+    _noiseSetSwitch(false)
+  {
 
     std::auto_ptr<PixelType> pixel( new PixelType);
     _nElement       = pixel->getNoOfElements();
     _type           = pixel->getSparsePixelType();
     _trackerData    = data;
-    _noiseSetSwitch = false;
     _noiseValues.clear();
-
   }
 
 

@@ -1,5 +1,5 @@
 // Author:  Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version: $Id: EUTelSimpleSparsePixel.cc 2285 2013-01-18 13:46:44Z hperrey $
+// Version: $Id: EUTelSimpleSparsePixel.cc 2612 2013-05-15 10:05:19Z spanns $
 
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -21,7 +21,11 @@ using namespace std;
 using namespace eutelescope;
 
 
-EUTelSimpleSparsePixel::EUTelSimpleSparsePixel() {
+EUTelSimpleSparsePixel::EUTelSimpleSparsePixel()\
+  : _xCoord(0),
+    _yCoord(0),
+    _signal(0)
+{
   _xCoord = 0;
   _yCoord = 0;
   _signal = 0;
@@ -29,7 +33,11 @@ EUTelSimpleSparsePixel::EUTelSimpleSparsePixel() {
   _type = kEUTelSimpleSparsePixel;
 }
 
-EUTelSimpleSparsePixel::EUTelSimpleSparsePixel(short xCoord, short yCoord, short signal) {
+EUTelSimpleSparsePixel::EUTelSimpleSparsePixel(short xCoord, short yCoord, short signal)
+  : _xCoord(0),
+    _yCoord(0),
+    _signal(0)
+{
   _xCoord = xCoord;
   _yCoord = yCoord;
   _signal = signal;
