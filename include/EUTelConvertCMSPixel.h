@@ -1,4 +1,4 @@
-// Version: $Id: CMSPixelReader.h 2348 2013-02-06 13:54:11Z spanns $
+// Version: $Id: EUTelConvertCMSPixel.h 2348 2013-02-06 13:54:11Z spanns $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -74,7 +74,7 @@ namespace eutelescope
    *
    */
 
-    class CMSPixelReader: public marlin::DataSourceProcessor 
+    class EUTelConvertCMSPixel: public marlin::DataSourceProcessor 
     {
         public:
             /*! This method returns an new instance of the this processor. It
@@ -84,11 +84,11 @@ namespace eutelescope
             *  @return a new CMSPixelReader.
             */
             virtual Processor * newProcessor() {
-                return new CMSPixelReader;
+                return new EUTelConvertCMSPixel;
             }
 
             //! Default constructor
-            CMSPixelReader();
+            EUTelConvertCMSPixel();
 
 	    //! Creates LCIO events from the native raw data
 	    /*! This is the real method. This is looping over all the events
@@ -176,13 +176,14 @@ namespace eutelescope
 	    //! Writing empty events for event correlation
             bool _writeEmptyEvents;
 	    
-	    //! Digital ROC PSI46dig enabled
-            bool _digitalROC;
+	    //! The ROC type. Can be: psi46v2, psi46xdb, psi46dig_trig, psi46dig, psi46digv2_b, psi46digv2.
+            int _ROC_type;
+
+	    //! Testboard type. Can be: PSI_ATB, PSI_DTB, RAL.
+	    std::string _TB_type;
 
 	    //! Reordering of telescope planes w.r.t. readout order
             IntVec _shufflePlanes;
-
-            bool _lazyDecoding;
 
 	    //! Event selection criterion
             int _event_selection;
@@ -198,7 +199,7 @@ namespace eutelescope
             std::vector<int >_setupPlane;
 
             //! Decoder verbosity level
-            int _debugSwitch;
+	    std::string _debugSwitch;
 
 	    //! Enable histogram writing
             bool _fillHistos;
@@ -240,7 +241,7 @@ namespace eutelescope
 
     };
     //! A global instance of the processor
-    CMSPixelReader gCMSPixelReader;
+    EUTelConvertCMSPixel gEUTelConvertCMSPixel;
     
 } // end namespace eutelescope
 
