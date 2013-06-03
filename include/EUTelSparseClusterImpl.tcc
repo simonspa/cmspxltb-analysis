@@ -1,4 +1,4 @@
-// Version: $Id: EUTelSparseClusterImpl.tcc 2606 2013-05-13 17:42:43Z hperrey $
+// Version: $Id: EUTelSparseClusterImpl.tcc 2658 2013-05-31 13:37:08Z hamnett $
 // -*- mode: c++; mode: auto-fill; mode: flyspell-prog; -*-
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -11,6 +11,9 @@
 
 #ifndef EUTELSPARSECLUSTERIMPL_TCC
 #define EUTELSPARSECLUSTERIMPL_TCC
+
+#include <iostream>
+using namespace std;
 
 using namespace EVENT;
 
@@ -353,7 +356,10 @@ namespace eutelescope {
   float EUTelSparseClusterImpl<PixelType>::getClusterCharge(int nPixel) const {
 
 
-    if ( static_cast<unsigned int> (nPixel) >= size() ) return getTotalCharge();
+    if ( static_cast<unsigned int> (nPixel) >= size() )
+    {
+      return getTotalCharge();
+    }
 
     std::vector<float > allSignals;
     
@@ -387,7 +393,6 @@ namespace eutelescope {
     std::vector<float > allSignals;
     PixelType * sparsePixel = new PixelType;
     for ( unsigned int iPixel = 0; iPixel < size(); iPixel++ ) {
-    
       getSparsePixelAt(iPixel, sparsePixel);
       allSignals.push_back( sparsePixel->getSignal() );
 
@@ -398,7 +403,8 @@ namespace eutelescope {
     for (unsigned int i = 0; i < nPixels.size(); i++ ) {
       iter = allSignals.begin();
       float charge = 0;
-      while ( iter != allSignals.begin() + nPixels[i] ) {
+      while ( iter != allSignals.begin() + nPixels[i]
+            && iter != allSignals.end() ) {//add or for allsignals.end
 	charge += (*iter);
 	++iter;
       }

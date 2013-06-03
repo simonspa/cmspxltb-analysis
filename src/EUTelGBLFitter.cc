@@ -8,6 +8,7 @@
 #ifdef USE_GBL
  
 // eutelescope includes ".h"
+#include "EUTelGeometryTelescopeGeoDescription.h"
 #include "EUTelGBLFitter.h"
 #include "EUTelTrackFitter.h"
 #include "EUTELESCOPE.h"
@@ -36,6 +37,7 @@
 #include <IMPL/TrackerHitImpl.h>
 #include <IMPL/TrackImpl.h>
 #include <IMPL/LCFlagImpl.h>
+#include "LCIOTypes.h"
 #include "lcio.h"
 
 // system includes <>
@@ -44,12 +46,14 @@
 #include <utility>
 #include <vector>
 #include <iomanip>
+#include <iterator>
 
 namespace eutelescope {
 
     EUTelGBLFitter::EUTelGBLFitter() : EUTelTrackFitter("GBLTrackFitter"),
-    _alignmentMode(kXYShift),
-    _parPropJac(5, 5) {
+    _alignmentMode(Utility::XYShiftZRot),
+    _parPropJac(5, 5),
+    _chi2cut(1000.) {
         _trackCandidates.clear();
         _gblTrackCandidates.clear();
 
@@ -59,9 +63,55 @@ namespace eutelescope {
 
     }
 
+    void EUTelGBLFitter::SetZRotationsVec(std::vector<int>& zRotationsVec) {
+        if( zRotationsVec.size() % 2 != 0 ) {
+            streamlog_out(WARNING2) << "zRotationsVec is probably wrongly specified \n"
+                                        "Size of zRotationsVec is odd" << std::endl;
+            return;
+        }
+        for( size_t ipair = 0; ipair < zRotationsVec.size(); ipair+=2 ) {
+            _paramterIdZRotationsMap.insert( std::make_pair(zRotationsVec[ipair], zRotationsVec[ipair+1]) );
+        }
+    }
+
+    void EUTelGBLFitter::SetYShiftsVec(std::vector<int>& yShiftsVec) {
+        if( yShiftsVec.size() % 2 != 0 ) {
+            streamlog_out(WARNING2) << "yShiftsVec is probably wrongly specified \n"
+                                        "Size of yShiftsVec is odd" << std::endl;
+            return;
+        }
+        for( size_t ipair = 0; ipair < yShiftsVec.size(); ipair+=2 ) {
+            _paramterIdYShiftsMap.insert( std::make_pair(yShiftsVec[ipair], yShiftsVec[ipair+1]) );
+        }
+    }
+
+    void EUTelGBLFitter::SetXShiftsVec(std::vector<int>& xShiftsVec) {
+        if( xShiftsVec.size() % 2 != 0 ) {
+            streamlog_out(WARNING2) << "xShiftsVec is probably wrongly specified \n"
+                                        "Size of xShiftsVec is odd" << std::endl;
+            return;
+        }
+        for( size_t ipair = 0; ipair < xShiftsVec.size(); ipair+=2 ) {
+            _paramterIdXShiftsMap.insert( std::make_pair(xShiftsVec[ipair], xShiftsVec[ipair+1]) );
+        }
+    }
+
+    std::map<int, int> EUTelGBLFitter::GetParamterIdZRotationsMap() const {
+        return _paramterIdZRotationsMap;
+    }
+
+    std::map<int, int> EUTelGBLFitter::GetParamterIdYShiftsMap() const {
+        return _paramterIdYShiftsMap;
+    }
+
+    std::map<int, int> EUTelGBLFitter::GetParamterIdXShiftsMap() const {
+        return _paramterIdXShiftsMap;
+    }
+
     EUTelGBLFitter::EUTelGBLFitter(std::string name) : EUTelTrackFitter(name),
-    _alignmentMode(kXYShift),
-    _parPropJac(5, 5) {
+    _alignmentMode(Utility::XYShiftZRot),
+    _parPropJac(5, 5),
+    _chi2cut(1000.) {
         _trackCandidates.clear();
         _gblTrackCandidates.clear();
 
@@ -84,37 +134,10 @@ namespace eutelescope {
         return _parPropJac;
     }
 
-    void EUTelGBLFitter::SetTrackCandidates(std::map< int, EVENT::TrackerHitVec >& trackCandidates) {
+    void EUTelGBLFitter::SetTrackCandidates( const std::vector< EVENT::TrackerHitVec >& trackCandidates) {
         this->_trackCandidates = trackCandidates;
         return;
     }
-
-    //! Calculates rough estimate of track's intersection point
-
-    //    double* EUTelGBLFitter::GetTrackOffset(const Utility::HitsPVec& trackCand) const {
-    //        double a[3] = {(*trackCand.begin())->X(), (*trackCand.begin())->Y(), (*trackCand.begin())->Z()};
-    //
-    //        return a;
-    //    }
-    //
-    //    double* EUTelGBLFitter::GetTrackSlope(const Utility::HitsPVec& trackCand) const {
-    //        TVector3 r1Vec((*trackCand.begin())->X(), (*trackCand.begin())->Y(), (*trackCand.begin())->Z());
-    //        TVector3 r2Vec((*trackCand.end())->X(), (*trackCand.end())->Y(), (*trackCand.end())->Z());
-    //        double r12Dist = TVector3(r1Vec - r2Vec).Mag();
-    //
-    //        TVector3 kVec = r2Vec - r1Vec;
-    //        kVec *= 1 / r12Dist;
-    //
-    //        double k[3] = {0., 0., 0.};
-    //        k[0] = kVec.X();
-    //        k[1] = kVec.Y();
-    //        k[2] = kVec.Z();
-    //
-    //        return k;
-    //    }
-    //
-    //    //! Predict track hit in X direction using simplified model
-    //
 
     double EUTelGBLFitter::InterpolateTrackX(const EVENT::TrackerHitVec& trackCand, const double z) const {
         double x0 = trackCand.front()->getPosition()[0];
@@ -155,16 +178,16 @@ namespace eutelescope {
     void EUTelGBLFitter::FitTracks() {
         Reset(); // 
 
-        streamlog_out(DEBUG1) << " EUTelGBLFitter::FitTracks() " << std::endl;
+        streamlog_out(DEBUG2) << " EUTelGBLFitter::FitTracks() " << std::endl;
         streamlog_out(DEBUG1) << " N track candidates:" << (int) _trackCandidates.size() << std::endl;
 
         streamlog_out(DEBUG1) << "Following track candidates supplied:" << std::endl;
-        std::map< int, EVENT::TrackerHitVec >::const_iterator itTrkCandHelp = _trackCandidates.begin();
+        std::vector< EVENT::TrackerHitVec >::iterator itTrkCandHelp = _trackCandidates.begin();
         EVENT::TrackerHitVec::const_iterator itHitHelp;
         for (; itTrkCandHelp != _trackCandidates.end(); ++itTrkCandHelp) {
-            streamlog_out(DEBUG1) << std::setfill('-') << std::setw(10) << itTrkCandHelp->first << std::setw(10) << ":" << std::setfill(' ') << std::endl;
-            itHitHelp = itTrkCandHelp->second.begin();
-            for (; itHitHelp != itTrkCandHelp->second.end(); ++itHitHelp) {
+            streamlog_out(DEBUG1) << std::setfill('-') << std::setw(10) << std::distance( _trackCandidates.begin(), itTrkCandHelp ) << std::setw(10) << ":" << std::setfill(' ') << std::endl;
+            itHitHelp = itTrkCandHelp->begin();
+            for (; itHitHelp != itTrkCandHelp->end(); ++itHitHelp) {
                 streamlog_out(DEBUG0) << *itHitHelp << std::endl;
                 streamlog_out(DEBUG0) << std::setw(10) << (*itHitHelp)->getPosition()[0]
                         << std::setw(10) << (*itHitHelp)->getPosition()[1]
@@ -173,36 +196,15 @@ namespace eutelescope {
         }
 
         TVectorD meas(2);
-
-        const double resx = 0.018/sqrt(12.); // [mm] telescope initial resolution
-        const double resy = 0.018/sqrt(12.); // [mm] telescope initial resolution
-//        const double resx = 0.00001/sqrt(12.); // [mm] telescope initial resolution
-//        const double resy = 0.00001/sqrt(12.); // [mm] telescope initial resolution
-
         TVectorD measPrec(2); // precision = 1/resolution^2
-        measPrec[0] = 1.0 / resx / resx;
-        measPrec[1] = 1.0 / resy / resy;
 
 	TVectorD scat(2);
 	scat.Zero();
 	
-        double _eBeam = 3.; // Run 5063
-//        double _eBeam = 5.; // Run 5080
         double p = _eBeam; // beam momentum
-        double X0Si = 50e-3 / 94; // Si 
-        double X0Kap = 60e-3 / 286; // Kapton
-        double X0Air = 150 / 304e3; // Air
-        double tetSi = (0.0136 * sqrt(X0Si) / p * (1 + 0.038 * std::log(X0Si)));
-        double tetKap = (0.0136 * sqrt(X0Kap) / p * (1 + 0.038 * std::log(X0Kap)));
-        double tetAir = (0.0136 * sqrt(X0Air) / p * ( 1 + 0.038*std::log(X0Air)));
 
         TVectorD scatPrecSensor(2);
-        scatPrecSensor[0] = 1.0 / (tetSi * tetSi + tetKap * tetKap);
-        scatPrecSensor[1] = 1.0 / (tetSi * tetSi + tetKap * tetKap);
-
         TVectorD scatPrecAir(2);
-        scatPrecAir[0] = 1.0 / (tetAir * tetAir);
-        scatPrecAir[1] = 1.0 / (tetAir * tetAir);
 
         TMatrixD alDer( 2, 3 ); // alignment derivatives
         alDer.Zero();
@@ -211,11 +213,11 @@ namespace eutelescope {
 	alDer[1][0] = 0.0; // dy/dx
 	alDer[1][1] = 1.0; // dy/dy
         
-        std::map< int, EVENT::TrackerHitVec >::const_iterator itTrkCand = _trackCandidates.begin();
+        std::vector< EVENT::TrackerHitVec >::const_iterator itTrkCand = _trackCandidates.begin();
         EVENT::TrackerHitVec::const_iterator itHit;
         for (; itTrkCand != _trackCandidates.end(); ++itTrkCand) {
 
-            if( itTrkCand->second.size() > 6 ) continue;
+            if( itTrkCand->size() > EUTelGeometryTelescopeGeoDescription::getInstance()._nPlanes ) continue;
             
             IMPL::TrackImpl * fittrack = new IMPL::TrackImpl();
 
@@ -227,10 +229,30 @@ namespace eutelescope {
             TMatrixD jacPointToPoint(5, 5);
             jacPointToPoint.UnitMatrix();
             double step = 0.;
-            double zprev = itTrkCand->second.front()->getPosition()[2];
-            itHit = itTrkCand->second.begin();
-            for (; itHit != itTrkCand->second.end(); ++itHit) {
+            double zprev = itTrkCand->front()->getPosition()[2];
+            itHit = itTrkCand->begin();
+            for (; itHit != itTrkCand->end(); ++itHit) {
+
+                const double radlenSi = EUTelGeometryTelescopeGeoDescription::
+                                        getInstance()._siPlanesLayerLayout->getSensitiveRadLength(iPlane);
+                const double radlenKap = EUTelGeometryTelescopeGeoDescription::
+                                         getInstance()._siPlanesLayerLayout->getLayerRadLength(iPlane);
+                const double thicknessSi = EUTelGeometryTelescopeGeoDescription::
+                                        getInstance()._siPlanesLayerLayout->getSensitiveThickness(iPlane);
+                const double thicknessKap = EUTelGeometryTelescopeGeoDescription::
+                                         getInstance()._siPlanesLayerLayout->getLayerThickness(iPlane);
+                
+                double X0Si = thicknessSi / radlenSi; // Si 
+                double X0Kap = thicknessKap / radlenKap; // Kapton                
+                
+                double tetSi = (0.0136 * sqrt(X0Si) / p * (1 + 0.038 * std::log(X0Si)));
+                double tetKap = (0.0136 * sqrt(X0Kap) / p * (1 + 0.038 * std::log(X0Kap)));
+                
+                scatPrecSensor[0] = 1.0 / (tetSi * tetSi + tetKap * tetKap);
+                scatPrecSensor[1] = 1.0 / (tetSi * tetSi + tetKap * tetKap);
+                
                 const double* hitpos = (*itHit)->getPosition();
+                const EVENT::FloatVec hitcov = (*itHit)->getCovMatrix();
 //                step = hitpos[2] - zprev;			// commented out because propagation is done in air's sub-block
 //                streamlog_out(DEBUG0) << "Step size:" << step << std::endl;	// commented out beacause propagation is done in air's sub-block
 //                jacPointToPoint = PropagatePar(step);		// commented out because propagation is done in air's sub-block
@@ -238,13 +260,13 @@ namespace eutelescope {
 //                
                 std::vector<int> globalLabels(3);
 //                std::vector<int> globalLabels(2);	// fit w/o rotations
-                globalLabels[0] = 1 + iPlane*10; // dx
-                globalLabels[1] = 2 + iPlane*10; // dy
-                globalLabels[2] = 3 + iPlane*10; // rot
+                globalLabels[0] = _paramterIdXShiftsMap[iPlane]; // dx
+                globalLabels[1] = _paramterIdYShiftsMap[iPlane]; // dy
+                globalLabels[2] = _paramterIdZRotationsMap[iPlane]; // rot z
 //                
 //                
-                double xPred = InterpolateTrackX(itTrkCand->second, hitpos[2]);
-                double yPred = InterpolateTrackY(itTrkCand->second, hitpos[2]);
+                double xPred = InterpolateTrackX(*itTrkCand, hitpos[2]);
+                double yPred = InterpolateTrackY(*itTrkCand, hitpos[2]);
 //                
                 alDer[0][2] = -yPred; // dx/rot
                 alDer[1][2] = xPred; // dy/rot
@@ -252,11 +274,14 @@ namespace eutelescope {
                 fittrack -> addHit(*itHit);
 
                 gbl::GblPoint point(jacPointToPoint);
-                meas[0] = hitpos[0] - xPred; // [um]
+                meas[0] = hitpos[0] - xPred;
                 meas[1] = hitpos[1] - yPred;
+                measPrec[0] = 1./hitcov[0];
+                measPrec[1] = 1./hitcov[2];
+
                 streamlog_out(DEBUG0) << "Residuals:" << std::endl;
-                streamlog_out(DEBUG0) << "X:" << std::setw(20) << meas[0] << std::setw(20) << resx << std::endl;
-                streamlog_out(DEBUG0) << "Y:" << std::setw(20) << meas[1] << std::setw(20) << resy << std::endl;
+                streamlog_out(DEBUG0) << "X:" << std::setw(20) << meas[0] << std::setw(20) << measPrec[0] << std::endl;
+                streamlog_out(DEBUG0) << "Y:" << std::setw(20) << meas[1] << std::setw(20) << measPrec[1] << std::endl;
                 TMatrixD proL2m(2, 2);
                 proL2m.UnitMatrix();
                 ++iLabel;
@@ -268,8 +293,14 @@ namespace eutelescope {
 
 		// construct effective scatterers for air
 		// the scatters must be at (Z(plane i) + Z(plane i+1))/2. +/- (Z(plane i) - Z(plane i+1))/sqrt(12)
-		if ( iPlane < itTrkCand->second.size()-1 ) {
+		if ( iPlane < itTrkCand->size()-1 ) {
 			const double planeSpacing = hitpos[2] - (*(itHit+1))->getPosition()[2];		// works only for 6 hits tracks
+
+                        double X0Air = planeSpacing / 304e3; // Air
+                        double tetAir = (0.0136 * sqrt(X0Air) / p * ( 1 + 0.038*std::log(X0Air)));
+                        scatPrecAir[0] = 1.0 / (tetAir * tetAir);
+                        scatPrecAir[1] = 1.0 / (tetAir * tetAir);
+
 			// propagate parameters into air gap
 			step = planeSpacing/2. - planeSpacing/sqrt(12.);
 			//step = planeSpacing/2.;
@@ -279,7 +310,7 @@ namespace eutelescope {
 			gbl::GblPoint pointInAir1(jacPointToPoint);
 			//pointInAir1.setLabel(1000+iLabel);
 			pointInAir1.setLabel(++iLabel);
-			pointInAir1.addScatterer(scat, scatPrecAir);
+//			pointInAir1.addScatterer(scat, scatPrecAir);
 			pointList.push_back(pointInAir1);
 
 			step = 2.*planeSpacing/sqrt(12.);
@@ -289,7 +320,7 @@ namespace eutelescope {
 			gbl::GblPoint pointInAir2(jacPointToPoint);
 			//pointInAir2.setLabel(2000+iLabel);
 			pointInAir2.setLabel(++iLabel);
-			pointInAir2.addScatterer(scat, scatPrecAir);
+//			pointInAir2.addScatterer(scat, scatPrecAir);
 			pointList.push_back(pointInAir2);
 
 			step = planeSpacing/2. - planeSpacing/sqrt(12.); 
@@ -312,7 +343,9 @@ namespace eutelescope {
 //            ierr = traj->fit(chi2, ndf, loss, mEstOpt);
             ierr = traj->fit(chi2, ndf, loss);
 
-            if( !ierr ) traj->milleOut( *_mille );
+            if( chi2 < _chi2cut ) {
+                if( !ierr ) traj->milleOut( *_mille );
+            }
             
             _gblTrackCandidates.insert(std::make_pair(_fittrackvec->getNumberOfElements(), traj));
 
@@ -342,7 +375,6 @@ namespace eutelescope {
             //            
             _fittrackvec->addElement(fittrack);
             //
-//            delete fittrack;
 
             streamlog_out(DEBUG1) << "Fit results:" << std::endl;
             streamlog_out(DEBUG1) << "Chi2:" << std::setw(10) << chi2 << std::endl;

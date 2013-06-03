@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelHitMaker.cc 2491 2013-03-21 18:27:32Z spanns $
+// Version $Id: EUTelHitMaker.cc 2661 2013-06-01 22:33:37Z rubinsky $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -132,13 +132,13 @@ EUTelHitMaker::EUTelHitMaker () : Processor("EUTelHitMaker") {
   registerOptionalParameter("OffsetDBFile","This is the name of the LCIO file name with the output offset db (add .slcio)",
                             _offsetDBFile, static_cast< string > ( "offset-db.slcio" ) );
  
-  registerOptionalParameter("OffsetCollection","This is the name of the preAligment collection stored in the offset-db.slcio file",
+  registerOptionalParameter("OffsetCollection","This is the name of the preAligment collection determined from hit correlations and stored in the offset db file.",
                             _preAlignmentCollectionName, static_cast< string > ( "preAlignment" ) );
  
-  registerOptionalParameter("ReferenceCollection","This is the name of the reference it collection (init at 0,0,0)",
-                            _referenceHitCollectionName, static_cast< string > ( "reference" ) );
+  registerOptionalParameter("ReferenceCollection","This is the name of the reference hit collection initialized in this processor. This collection provides the reference vector to correctly determine a plane corresponding to a global hit coordiante.",
+                            _referenceHitCollectionName, static_cast< string > ( "referenceHit" ) );
  
-  registerOptionalParameter("ReferenceHitFile","This is the name of the reference it collection (init at 0,0,0)",
+  registerOptionalParameter("ReferenceHitFile","This is the file where the reference hit collection is stored",
                             _referenceHitLCIOFile, static_cast< string > ( "reference.slcio" ) );
     
 }
@@ -272,16 +272,20 @@ void EUTelHitMaker::DumpReferenceHitDB()
      refhit->setGamma( _RotatedVector[2] );
      referenceHitCollection->push_back( refhit );
   }
-  event->addCollection( referenceHitCollection, "referenceHit" );
+  event->addCollection( referenceHitCollection, _referenceHitCollectionName );
 
+  addReferenceHitCollection(event, "referenceHit01");
+  addReferenceHitCollection(event, "referenceHit02");
   addReferenceHitCollection(event, "referenceHit11");
   addReferenceHitCollection(event, "referenceHit12");
   addReferenceHitCollection(event, "referenceHit21");
   addReferenceHitCollection(event, "referenceHit22");
-  addReferenceHitCollection(event, "referenceHit23");
   addReferenceHitCollection(event, "referenceHit31");
   addReferenceHitCollection(event, "referenceHit32");
-  addReferenceHitCollection(event, "referenceHit33");
+  addReferenceHitCollection(event, "referenceHit41");
+  addReferenceHitCollection(event, "referenceHit42");
+  addReferenceHitCollection(event, "referenceHit51");
+  addReferenceHitCollection(event, "referenceHit52");
  
   lcWriter->writeEvent( event );
   delete event;
@@ -468,6 +472,7 @@ void EUTelHitMaker::processEvent (LCEvent * event) {
     double xZero = 0., yZero = 0., zZero = 0. ;
     double xSize = 0., ySize = 0.;
     double zThickness = 0.;
+    double resolution = 0.;
     double xPitch = 0., yPitch = 0.;
     double xPointing[2] = { 1., 0. }, yPointing[2] = { 1., 0. };
 
@@ -563,6 +568,7 @@ void EUTelHitMaker::processEvent (LCEvent * event) {
           yZero        = _siPlanesLayerLayout->getDUTSensitivePositionY(); // mm
           zZero        = _siPlanesLayerLayout->getDUTSensitivePositionZ(); // mm
           zThickness   = _siPlanesLayerLayout->getDUTSensitiveThickness(); // mm
+          resolution   = _siPlanesLayerLayout->getDUTSensitiveResolution();// mm
           xPitch       = _siPlanesLayerLayout->getDUTSensitivePitchX();    // mm
           yPitch       = _siPlanesLayerLayout->getDUTSensitivePitchY();    // mm
           xSize        = _siPlanesLayerLayout->getDUTSensitiveSizeX();     // mm
@@ -611,6 +617,7 @@ void EUTelHitMaker::processEvent (LCEvent * event) {
           yZero        = _siPlanesLayerLayout->getSensitivePositionY(layerIndex); // mm
           zZero        = _siPlanesLayerLayout->getSensitivePositionZ(layerIndex); // mm
           zThickness   = _siPlanesLayerLayout->getSensitiveThickness(layerIndex); // mm
+          resolution   = _siPlanesLayerLayout->getSensitiveResolution(layerIndex);// mm
           xPitch       = _siPlanesLayerLayout->getSensitivePitchX(layerIndex);    // mm
           yPitch       = _siPlanesLayerLayout->getSensitivePitchY(layerIndex);    // mm
           xSize        = _siPlanesLayerLayout->getSensitiveSizeX(layerIndex);     // mm
@@ -963,6 +970,12 @@ void EUTelHitMaker::processEvent (LCEvent * event) {
       TrackerHitImpl * hit = new TrackerHitImpl;
 //      hit->setDetectorID( detectorID ) ;
       hit->setPosition( &telPos[0] );
+      float cov[TRKHITNCOVMATRIX] = {0.,0.,0.,0.,0.,0.};
+      double resx = resolution;
+      double resy = resolution;
+      cov[0] = resx * resx; // cov(x,x)
+      cov[2] = resy * resy; // cov(y,y)
+      hit->setCovMatrix( cov );
       hit->setType( pulseCellDecoder(pulse)["type"] );
 
       // prepare a LCObjectVec to store the current cluster
@@ -991,18 +1004,9 @@ void EUTelHitMaker::processEvent (LCEvent * event) {
     if ( isFirstEvent() ) _isFirstEvent = false;
 }
 
-//void EUTelHitMaker::end() 
-//{
-//  streamlog_out ( MESSAGE4 )  << "Successfully finished" << endl;
-//}
-
 void EUTelHitMaker::end() 
 {
- 
-
-
   streamlog_out ( MESSAGE4 )  << "Successfully finished" << endl;
-
 }
 
 void EUTelHitMaker::bookHistos(int sensorID, bool isDUT, LCCollection * xEtaCollection, LCCollection * yEtaCollection) {
