@@ -24,6 +24,13 @@
 #include <iostream>
 #include <vector>
 
+#ifndef DISALLOW_COPY_AND_ASSIGN
+//Following #define stops the accidental creation of a copy or assignment operator by causing a link error.
+//Copy and Assignment operators not allowed because they are unnecessary and the cause of many bugs
+#define DISALLOW_COPY_AND_ASSIGN(TypeName) \
+TypeName(const TypeName&); \
+void operator=(const TypeName&);
+#endif
 
 namespace eutelescope {
 
@@ -185,12 +192,15 @@ namespace eutelescope {
 
         int GuessSensorID(const IMPL::TrackerHitImpl * hit);
 
+        /** Highland's formula for multiple scattering */
+        double getThetaRMSHighland( double, double );
+        
         /** Calculate median */
         double getMedian(std::vector<double>& );
         
         /** Possible choices of alignment degrees of freedom */
         enum AlignmentMode {
-            noAlignment, XYShift, XYShiftZRot
+            noAlignment, XYShift, XYShiftXYRot, XYZShiftXYRot, XYShiftYZRotXYRot, XYShiftXZRotXYRot, XYShiftXZRotYZRotXYRot, XYZShiftXZRotYZRotXYRot
         };
     }
 }
