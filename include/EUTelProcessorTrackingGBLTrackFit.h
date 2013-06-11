@@ -30,6 +30,7 @@
 #include "EUTelTrackFitter.h"
 #include "EUTelGBLFitter.h"
 #include "EUTelGeometryTelescopeGeoDescription.h"
+#include "EUTelUtility.h"
 
 using namespace lcio;
 using namespace marlin;
@@ -42,6 +43,10 @@ namespace eutelescope {
      *  @see EUTelTrackFitter
      */
     class EUTelProcessorTrackingGBLTrackFit : public Processor {
+
+    private:
+        DISALLOW_COPY_AND_ASSIGN(EUTelProcessorTrackingGBLTrackFit)     // prevent users from making (default) copies of processors
+        
     public:
 
         virtual Processor* newProcessor() {
@@ -49,7 +54,8 @@ namespace eutelescope {
         }
 
         EUTelProcessorTrackingGBLTrackFit();
-
+        
+    public:
         /** Called at the begin of the job before anything is read.
          * Use to initialize the processor, e.g. book histograms.
          */
@@ -72,6 +78,9 @@ namespace eutelescope {
 
 
     public:
+        /** Prepare MILLIPEDE steering file */
+        void writeMilleSteeringFile();
+
         /** Histogram booking */
         void bookHistograms();
 
@@ -79,13 +88,57 @@ namespace eutelescope {
         // Processor parameters
 
     public:
+
+        // Necessary parameters
+
+        /** Beam energy in [GeV] */
+        double _eBeam;
+
+
+        // Optional parameters
+
+        /** Alignment mode */
+        int _alignmentMode;
+
+        /** Parameter ids */
+        IntVec _xShiftsVec;
+        
+        /** Parameter ids */
+        IntVec _yShiftsVec;
+        
+        /** Parameter ids */
+        IntVec _zShiftsVec;
+        
+        /** Parameter ids */
+        IntVec _xRotationsVec;
+        
+        /** Parameter ids */
+        IntVec _yRotationsVec;
+        
+        /** Parameter ids */
+        IntVec _zRotationsVec;
         
         /** Mille binary filename */
-        string _binaryFilename;
+        string _milleBinaryFilename;
+
+        /** Mille steering filename */
+        string _milleSteeringFilename;
+
+        /** Alignment plane ids*/
+        IntVec _alignmentPlaneIds;
+        
+        /** Automatic pede run flag*/
+        bool _runPede;
+        
+        /** Maximum value of track chi2 for millipede */
+        double _maxChi2Cut;
 
         /** TGeo geometry file name */
         string _tgeoFileName;
         
+        /** Histogram info file name */
+        string _histoInfoFileName;
+
     protected:
 
         // Input/Output collections of the processor
@@ -100,17 +153,22 @@ namespace eutelescope {
 
         /** Track fitter */
         EUTelTrackFitter *_trackFitter;
-        
+
         /** Mille */
         gbl::MilleBinary * _milleGBL;
 
+    private:
 
-    protected:
+        struct AlignmentConstants {
+            AlignmentConstants() : _xResiduals(), _nxResiduals(), _yResiduals(), _nyResiduals() {};
+            std::map< int, double > _xResiduals;   //! sum all x residuals for given plane id
+            std::map< int, int >    _nxResiduals;  //! number of residuals used to calculate mean for given plane id
+            std::map< int, double > _yResiduals;   //! sum all y residuals for given plane id
+            std::map< int, int >    _nyResiduals;  //! number of residuals used to calculate mean for given plane id
+        };
 
-        // Geometry related information
-
-        /** GEAR description */
-        EUTelGeometryTelescopeGeoDescription* _geometry;
+        /** Initial alignment constants */
+        AlignmentConstants _alignmentConstants;
 
 
     private:
@@ -141,17 +199,19 @@ namespace eutelescope {
         map< string, AIDA::IHistogram2D* > _aidaHistoMap2D;
 
         /** Names of histograms */
-        static string _chi2GblFitHistName;
-        static string _probGblFitHistName;
-        static string _residGblFitHistName;
-        static string _residGblFitHistNameX;
-        static string _residGblFitHistNameY;
-        static string _resid2DGblFitHistNameXvsX;
-        static string _resid2DGblFitHistNameXvsY;
-        static string _resid2DGblFitHistNameYvsX;
-        static string _resid2DGblFitHistNameYvsY;
-        static string _kinkGblFitHistNameX;
-        static string _kinkGblFitHistNameY;
+        struct _histName {
+            static string _chi2GblFitHistName;
+            static string _probGblFitHistName;
+            static string _residGblFitHistName;
+            static string _residGblFitHistNameX;
+            static string _residGblFitHistNameY;
+            static string _resid2DGblFitHistNameXvsX;
+            static string _resid2DGblFitHistNameXvsY;
+            static string _resid2DGblFitHistNameYvsX;
+            static string _resid2DGblFitHistNameYvsY;
+            static string _kinkGblFitHistNameX;
+            static string _kinkGblFitHistNameY;
+        };
 
 #endif // defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
 

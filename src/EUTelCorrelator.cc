@@ -1,4 +1,4 @@
-// Version $Id: EUTelCorrelator.cc 2577 2013-04-29 12:19:30Z hperrey $
+// Version $Id: EUTelCorrelator.cc 2641 2013-05-24 07:27:07Z hperrey $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -123,7 +123,7 @@ EUTelCorrelator::EUTelCorrelator () : Processor("EUTelCorrelator") {
   registerOptionalParameter("OffsetDBFile","This is the name of the LCIO file name with the output offset db (add .slcio)",
                               _offsetDBFile, static_cast< string > ( "offset-db.slcio" ) );
 
-  registerOptionalParameter("ReferenceCollection","reference hit collection name ", _referenceHitCollectionName, static_cast <string> ("reference") );
+  registerOptionalParameter("ReferenceCollection","reference hit collection name ", _referenceHitCollectionName, static_cast <string> ("referenceHit") );
  
   registerOptionalParameter("ApplyToReferenceCollection","Do you want the reference hit collection to be corrected by the shifts and tilts from the alignment collection? (default - false )",  _applyToReferenceHitCollection, static_cast< bool   > ( false ));
  

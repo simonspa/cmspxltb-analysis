@@ -1,4 +1,4 @@
-// Version: $Id: EUTelPreAlignment.cc 2562 2013-04-23 06:49:42Z hamnett $
+// Version: $Id: EUTelPreAlignment.cc 2672 2013-06-03 16:48:07Z hperrey $
 #ifdef USE_GEAR
 // eutelescope includes ".h"
 #include "EUTelPreAlignment.h"
@@ -71,8 +71,8 @@ EUTelPreAlign::EUTelPreAlign () :Processor("EUTelPreAlign") {
   registerOptionalParameter("AlignmentConstantLCIOFile","Name of LCIO db file where alignment constantds will be stored", 
 			    _alignmentConstantLCIOFile, std::string( "alignment.slcio" ) );
 
-  registerOptionalParameter("HotPixelCollectionName", "This is the name of the hot pixel collection to be saved into the output slcio file",
-                             _hotPixelCollectionName, static_cast< string > ( "hotpixel" ));
+  registerOptionalParameter("HotPixelCollectionName", "This is the name of the hot pixel collection that clusters should be checked against (optional). ",
+                             _hotPixelCollectionName, static_cast< string > ( "" ));
 
   registerProcessorParameter ("Events",
                               "How many events should be used for an approximation to the X,Y shifts (pre-alignment)? (default=50000)",
@@ -162,6 +162,13 @@ void EUTelPreAlign::init () {
     _sensorIDtoZOrderMap.insert(make_pair( sensorID, _sensors_to_the_left));
   }
 
+  for ( int iPlane = 0 ; iPlane < _siPlanesLayerLayout->getNLayers(); iPlane++ ) 
+  {
+    _siPlaneZPosition[ iPlane ] = _siPlanesLayerLayout->getLayerPositionZ(iPlane);
+    int sensorID = _siPlanesLayerLayout->getID( iPlane );
+    _sensorIDinZordered.insert(make_pair( _sensorIDtoZOrderMap[ sensorID ], sensorID ) );
+  }
+
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
   string tempHistoName = "";
   string basePath; 
@@ -169,17 +176,18 @@ void EUTelPreAlign::init () {
   if(_fillHistos) {
     for(unsigned int i = 1; i < _sensorIDVecZOrder.size(); i++)
     {
-      basePath = "plane_" + to_string( i );
+      int sensorID = _sensorIDinZordered[i];
+      basePath = "plane_" + to_string( sensorID );
       AIDAProcessor::tree(this)->mkdir(basePath.c_str());
       basePath.append("/");
  
-      tempHistoName = "hitXCorr_0_to_" + to_string( i ) ;
+      tempHistoName = "hitXCorr_0_to_" + to_string( sensorID ) ;
       AIDA::IHistogram1D * histo1Da = AIDAProcessor::histogramFactory(this)->createHistogram1D( (basePath + tempHistoName).c_str(), 100 , -10., 10.);
-      _hitXCorr.insert( make_pair( i, histo1Da) );
+      _hitXCorr.insert( make_pair( sensorID, histo1Da) );
  
-      tempHistoName = "hitYCorr_0_to_" + to_string( i ) ;
+      tempHistoName = "hitYCorr_0_to_" + to_string( sensorID) ;
       AIDA::IHistogram1D * histo1Db = AIDAProcessor::histogramFactory(this)->createHistogram1D( (basePath + tempHistoName).c_str(), 100 , -10., 10.) ;
-      _hitYCorr.insert( make_pair( i, histo1Db) );
+      _hitYCorr.insert( make_pair( sensorID, histo1Db) );
     }
   }
 #endif
@@ -195,6 +203,9 @@ void EUTelPreAlign::processRunHeader (LCRunHeader * rdr) {
 
 void  EUTelPreAlign::FillHotPixelMap(LCEvent *event)
 {
+
+  if (_hotPixelCollectionName.empty()) return;
+
     LCCollectionVec *hotPixelCollectionVec = 0;
     try 
     {
@@ -203,7 +214,7 @@ void  EUTelPreAlign::FillHotPixelMap(LCEvent *event)
     }
     catch (...)
     {
-      streamlog_out ( MESSAGE5 ) << "Hotpixel database " << _hotPixelCollectionName.c_str() << " not found" << endl; 
+      streamlog_out ( WARNING5 ) << "Hotpixel database " << _hotPixelCollectionName.c_str() << " not found" << endl; 
       return;
     }
 
@@ -228,9 +239,7 @@ void  EUTelPreAlign::FillHotPixelMap(LCEvent *event)
 
                try
                {
-                  char ix[100];
-                  sprintf(ix, "%d,%d,%d", sensorID, apixPixel.getXCoord(), apixPixel.getYCoord() ); 
-                  _hotPixelMap[ix] = true;             
+		 _hotPixelMap[sensorID].push_back(std::make_pair(apixPixel.getXCoord(), apixPixel.getYCoord()));
                }
                catch(...)
                {
@@ -253,13 +262,12 @@ void  EUTelPreAlign::FillHotPixelMap(LCEvent *event)
 
               try
               {
-                 char ix[100];
-                 sprintf(ix, "%d,%d,%d", sensorID, m26Pixel.getXCoord(), m26Pixel.getYCoord() ); 
-                 _hotPixelMap[ix] = true;             
+		 _hotPixelMap[sensorID].push_back(std::make_pair(m26Pixel.getXCoord(), m26Pixel.getYCoord()));
               }
               catch(...)
               {
 		streamlog_out ( ERROR5 ) << " cannot add pixel to hotpixel map! SensorID: "  << sensorID << ", X:" << m26Pixel.getXCoord() << ", Y:" << m26Pixel.getYCoord() << endl; 
+		abort();
               }
              }
            }          
@@ -274,11 +282,14 @@ void EUTelPreAlign::processEvent (LCEvent * event) {
 
   if ( isFirstEvent() )
   {
+
     FillHotPixelMap(event);
-    if ( _applyToReferenceHitCollection ) 
+
+   if ( _applyToReferenceHitCollection ) 
     {
        try{
-       _referenceHitVec = dynamic_cast < LCCollectionVec * > (event->getCollection( _referenceHitCollectionName));
+
+   _referenceHitVec = dynamic_cast < LCCollectionVec * > (event->getCollection( _referenceHitCollectionName));
        }
        catch(...)
        {
@@ -302,8 +313,11 @@ void EUTelPreAlign::processEvent (LCEvent * event) {
                                << " is of unknown type. Continue considering it as a normal Data Event." << endl;
   }
 
+
+
   try {
     LCCollectionVec * inputCollectionVec         = dynamic_cast < LCCollectionVec * > (evt->getCollection(_inputHitCollectionName));
+
 
     std::vector<float>   hitX;
     std::vector<float>   hitY;
@@ -311,7 +325,9 @@ void EUTelPreAlign::processEvent (LCEvent * event) {
 
 
     //Loop over hits in fixed plane
-    for (size_t ref = 0; ref < inputCollectionVec->size(); ref++) {
+    for (size_t ref = 0; ref < inputCollectionVec->size(); ref++) 
+    {
+
       TrackerHitImpl   * refHit   = dynamic_cast< TrackerHitImpl * >  ( inputCollectionVec->getElementAt( ref ) ) ;
       const double * refPos = refHit->getPosition();
       // identify fixed plane
@@ -323,8 +339,8 @@ void EUTelPreAlign::processEvent (LCEvent * event) {
       for (size_t iHit = 0; iHit < inputCollectionVec->size(); iHit++) 
       {
 	TrackerHitImpl   * hit   = dynamic_cast< TrackerHitImpl * >  ( inputCollectionVec->getElementAt( iHit ) ) ;
-	if( hitContainsHotPixels(hit) ) continue;
-
+        if( hitContainsHotPixels(hit) ) continue;
+        
         const double * pos = hit->getPosition();
         int iHitID = guessSensorID(pos);  
         if( iHitID == _fixedID ) continue;
@@ -355,12 +371,12 @@ void EUTelPreAlign::processEvent (LCEvent * event) {
 	  streamlog_out ( ERROR5 ) << "Mismatched hit at " << pos[2] << endl;
 	}
       }
-
+        
       if( prealign.size() > static_cast< unsigned int >(_minNumberOfCorrelatedHits) && hitX.size() == hitY.size() )
       {
          for(unsigned int ii = 0 ;ii < prealign.size();ii++)
          {  
-            prealign[ii]->addPoint( hitX[ii], hitY[ii] );
+              prealign[ii]->addPoint( hitX[ii], hitY[ii] );
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
               if(_fillHistos) {
                 (dynamic_cast<AIDA::IHistogram1D*> (_hitXCorr[prealign[ii]->getIden()]))->fill( hitX[ii] );
@@ -369,6 +385,7 @@ void EUTelPreAlign::processEvent (LCEvent * event) {
 #endif
          } 
       }
+        
     }
   }
   catch (DataNotAvailableException& e) { 
@@ -377,11 +394,16 @@ void EUTelPreAlign::processEvent (LCEvent * event) {
   }
 
   if ( isFirstEvent() ) _isFirstEvent = false;
+        
 }
 
 bool EUTelPreAlign::hitContainsHotPixels( TrackerHitImpl   * hit) 
 {
+
         bool skipHit = false;
+
+	// if no hot pixel map was loaded, just return here
+	if (_hotPixelMap.size() == 0) return 0;
  
         try
         {
@@ -400,14 +422,19 @@ bool EUTelPreAlign::hitContainsHotPixels( TrackerHitImpl   * hit)
                 EUTelSimpleSparsePixel m26Pixel;
                 cluster->getSparsePixelAt( iPixel, &m26Pixel);
 		{
-		  char ix[100];
-		  sprintf(ix, "%d,%d,%d", sensorID, m26Pixel.getXCoord(), m26Pixel.getYCoord() ); 
-		  std::map<std::string, bool >::const_iterator z = _hotPixelMap.find(ix);
-		  if(z!=_hotPixelMap.end() && _hotPixelMap[ix] == true  )
-		    { 
+		  try{
+		    if (std::find(_hotPixelMap.at(sensorID).begin(), 
+				  _hotPixelMap.at(sensorID).end(),
+				  std::make_pair(m26Pixel.getXCoord(),m26Pixel.getYCoord()))
+			!= _hotPixelMap.at(sensorID).end()){ 
 		      skipHit = true; 	      
 		      delete cluster;                        			  
 		      return true; // if TRUE  this hit will be skipped
+		    }
+		  }
+		  catch(const std::out_of_range& oor){
+		    streamlog_out(DEBUG0) << " Could not find hot pixel map for sensor ID " 
+					  << sensorID << ": " << oor.what() << endl;
 		  }
 		}
               }
@@ -451,19 +478,26 @@ bool EUTelPreAlign::hitContainsHotPixels( TrackerHitImpl   * hit)
                     EUTelAPIXSparsePixel apixPixel;
                     apixCluster->getSparsePixelAt(iPixel, &apixPixel);
                     {
-                       char ix[100];
-                       sprintf(ix, "%d,%d,%d", sensorID, apixPixel.getXCoord(), apixPixel.getYCoord() ); 
-                       if( _hotPixelMap[ix]  )
-                       { 
+		      try{
+			if (std::find(_hotPixelMap.at(sensorID).begin(), 
+				      _hotPixelMap.at(sensorID).end(),
+				      std::make_pair(apixPixel.getXCoord(), apixPixel.getYCoord()))
+			    != _hotPixelMap.at(sensorID).end()){ 
                           skipHit = true; 	      
                           delete apixCluster;                        
                           return true; // if TRUE  this hit will be skipped
-                       }
-                       else
-                       { 
-                          skipHit = false; 	      
-                       } 
-                    }
+			}
+			else
+			  { 
+			    skipHit = false; 	      
+			  } 
+		      }
+		      catch(const std::out_of_range& oor){
+			streamlog_out(DEBUG0) << " Could not find hot pixel map for sensor ID " 
+					      << sensorID << ": " << oor.what() << endl;
+		      }
+		      
+		    }
                 }                
                 delete apixCluster;
                 return skipHit; // if TRUE  this hit will be skipped
@@ -474,14 +508,18 @@ bool EUTelPreAlign::hitContainsHotPixels( TrackerHitImpl   * hit)
            }
  
        }
-       catch(...)
-       { 
-          // if anything went wrong in the above return FALSE, meaning do not skip this hit
+	catch (exception& e)
+	  {
+	     streamlog_out(ERROR4) << "something went wrong in EUTelPreAlign::hitContainsHotPixels: " << e.what() << endl;
+	  }
+	catch(...)
+	  { 
+	    // if anything went wrong in the above return FALSE, meaning do not skip this hit
+	    
+	    streamlog_out(ERROR4) << "something went wrong in EUTelPreAlign::hitContainsHotPixels " << endl;
+	    return 0;
+	  }
 	
-          streamlog_out(ERROR4) << "something went wrong in EUTelPreAlign::hitContainsHotPixels " << endl;
-          return 0;
-       }
- 
        // if none of the above worked return FALSE, meaning do not skip this hit
        return 0;
 }

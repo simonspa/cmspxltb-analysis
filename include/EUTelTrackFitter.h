@@ -21,21 +21,27 @@
 #include <string>
 #include <map>
 
+// EUTELESCOPE
+#include "EUTelUtility.h"
+
 namespace eutelescope {
 
     class EUTelTrackFitter {
+      
+    private:
+        DISALLOW_COPY_AND_ASSIGN(EUTelTrackFitter)        // prevent users from making (default) copies of processors
+      
     public:
         EUTelTrackFitter();
- //       EUTelTrackFitter(const EUTelTrackFitter& orig);
-
-        EUTelTrackFitter( std::string name );
+ 
+        explicit EUTelTrackFitter( std::string name );
 
         virtual ~EUTelTrackFitter();
         
         inline void SetName( std::string name) { this->_name = name; }
         inline std::string GetName() const { return _name; }
 
-        virtual void SetTrackCandidates( std::map< int, EVENT::TrackerHitVec >& );
+        virtual void SetTrackCandidates( const std::vector< EVENT::TrackerHitVec >& );
 
         virtual void FitTracks();
     protected:

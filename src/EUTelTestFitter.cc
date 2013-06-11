@@ -1,4 +1,4 @@
-// Version: $Id: EUTelTestFitter.cc 2582 2013-04-29 15:08:33Z hperrey $
+// Version: $Id: EUTelTestFitter.cc 2641 2013-05-24 07:27:07Z hperrey $
         
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -296,7 +296,7 @@ EUTelTestFitter::EUTelTestFitter()
 
   // optional parameters
 
-  registerOptionalParameter("ReferenceCollection","reference hit collection name ", _referenceHitCollectionName, static_cast <string> ("reference") );
+  registerOptionalParameter("ReferenceCollection","reference hit collection name ", _referenceHitCollectionName, static_cast <string> ("referenceHit") );
  
   registerOptionalParameter("ApplyToReferenceCollection","Do you want the reference hit collection to be corrected by the shifts and tilts from the alignment collection? (default - false )",  _applyToReferenceHitCollection, static_cast< bool   > ( false ));
  
