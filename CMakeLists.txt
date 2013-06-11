@@ -186,8 +186,6 @@ ADD_DEFINITIONS("-DDO_TESTING")
 INCLUDE_DIRECTORIES( ./include )
 INCLUDE_DIRECTORIES( ./external )
 
-ADD_SUBDIRECTORY(external/CMSPixelDecoder)
-
 #INSTALL_DIRECTORY( ./include DESTINATION . FILES_MATCHING PATTERN "*.h" )
 
 # definitions to pass to the compiler
