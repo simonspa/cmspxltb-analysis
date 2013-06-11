@@ -38,7 +38,7 @@ export LD_LIBRARY_PATH="$GEAR/lib:$LD_LIBRARY_PATH"
 #--------------------------------------------------------------------------------
 #     ROOT
 #--------------------------------------------------------------------------------
-export ROOTSYS="/home/spanns/ilcsoft/v01-17/root/5.34.05"
+export ROOTSYS="/home/spanns/ilcsoft/v01-17/root/5.34.07"
 export PATH="$ROOTSYS/bin:$PATH"
 export LD_LIBRARY_PATH="$ROOTSYS/lib:$LD_LIBRARY_PATH"
 
