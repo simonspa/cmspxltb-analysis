@@ -154,12 +154,6 @@ namespace eutelescope {
 
   private:
 
-    //! This is the TrackerDataImpl
-    /*! This is the object where the sparse data information are
-     *  collected all together.
-     */
-    IMPL::TrackerDataImpl * _trackerData;
-
     //! Number of elements in the sparse pixel
     /*! This value is initialized in the constructor and taken from
      *  the template class.
@@ -171,6 +165,12 @@ namespace eutelescope {
      *  the template class.
      */
     SparsePixelType _type;
+
+    //! This is the TrackerDataImpl
+    /*! This is the object where the sparse data information are
+     *  collected all together.
+     */
+    IMPL::TrackerDataImpl * _trackerData;
 
   };
  
