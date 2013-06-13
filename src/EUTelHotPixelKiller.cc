@@ -600,14 +600,13 @@ void EUTelHotPixelKiller::check( LCEvent * event )
       bookAndFillHistos();
 #endif
 
-      if( getBuildHotPixelDatabase() != 0 && _iCycle == _totalNoOfCycle)
+      // increment the cycle number
+      ++_iCycle;
+
+      if( getBuildHotPixelDatabase() != 0 )
       {
           HotPixelDBWriter(event );
       }
-
-
-      // increment the cycle number
-      ++_iCycle;
 
       // reset the _iEvt counter
       _iEvt = 0;
