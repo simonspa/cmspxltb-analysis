@@ -1,6 +1,6 @@
 // Contact: Igor Rubinskiy, DESY <mailto:igorrubinsky@gmail.com>
 //
-// Version: $Id: EUTelMille.cc 2651 2013-05-30 15:27:47Z hperrey $
+// Version: $Id: EUTelMille.cc 2712 2013-06-13 09:30:26Z eicht $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -3109,8 +3109,8 @@ void EUTelMille::end() {
       } // end loop over all planes
 
       steerFile << endl;
-      steerFile << "! chiscut 5.0 2.5" << endl;
-      steerFile << "! outlierdownweighting 4" << endl;
+      steerFile << "chiscut 5.0 2.5" << endl;
+      steerFile << "outlierdownweighting 4" << endl;
       steerFile << endl;
       steerFile << "method inversion 10 0.001" << endl;
       steerFile << endl;

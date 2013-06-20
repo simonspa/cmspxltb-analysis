@@ -19,6 +19,7 @@ from sys import exit # use sys.exit instead of built-in exit (latter raises exce
 import logging
 import os
 
+
 def timeStampCanvas ( canvas ):
     import rootpy
     from rootpy.plotting import Canvas
@@ -65,12 +66,22 @@ def printPlots(cans,outPath,separateFiles):
         timeStampCanvas(can)
         if not separateFiles:
             if not pdfOpen:
-                log.debug( "Saving canvas to '" + outPath +"'")
-                can.Print(outPath+"(") # open the pdf file for appending
+                log.debug( "Saving canvas #%i to '%s'"%(idx, outPath))
+                # if we have multiple canvases we need a special operation 
+                # to open the pdf for appending
+                if len(cans) > 1:
+                    can.Print(outPath+"(") # open the pdf file for appending
+                else:
+                    can.Print(outPath) # just write the file if handling single canvas
                 pdfOpen = True
             else:
                 log.debug( "Storing canvas #"+str(idx))
-                can.Print(outPath) # print in the same file
+                # check if we are on the last canvas: then close the pdf
+                if idx == (len(cans)-1):
+                    log.debug( ".. and closing pdf file")
+                    can.Print(outPath+")") # close the pdf file
+                else:
+                    can.Print(outPath) # print in the same file
                 log.debug( "Done with canvas #"+str(idx))
         else:
             # set up file name to print to
@@ -83,8 +94,6 @@ def printPlots(cans,outPath,separateFiles):
             if not os.path.exists(os.path.dirname(filename)):
                         os.makedirs(os.path.dirname(filename))
             can.Print(filename)
-    if pdfOpen:
-        can.Print(outPath+")") # close the pdf file
 
 
 def makePlotCollection( histodicts, files, filesdescr, outPath, docompare, doseparateFiles, logscale):
@@ -106,21 +115,27 @@ def plotHistos ( histos, text = "", option = "", statbox = True):
     import rootpy
     from rootpy.plotting import Hist, HistStack
     from ROOT import kRed,gPad,TPaveStats
+    # only for 1D and 2D type histograms:
     # determine and set maximum for all histograms
     stack = HistStack()
     for hist in histos:
-        stack.Add(hist)
-    # determine maximum value (will be set for all histograms)
-    maxplot = stack.GetMaximum()
-    minplot = stack.GetMinimum()
-    for idx, hist in enumerate(histos):
-        try:
+        if not hist.__class__.__name__ == "Hist3D":
+            stack.Add(hist)
+    # determine maximum value and set it for all histograms
+    if stack.GetHists():
+        maxplot = stack.GetMaximum()
+        minplot = stack.GetMinimum()
+        for hist in stack.GetHists():
             hist.SetMaximum(maxplot)
+            # special treatment for log scale Y
             if gPad.GetLogy():
                 hist.SetMinimum(1.)
             else:
+                # if histogram minimum is positive, set to 0.
                 if minplot > 0:
                     hist.SetMinimum(0.)
+    for idx, hist in enumerate(histos):
+        try:
             thisopt = option
             # if not first histo, add "same" to options so previous ones are not overwritten
             if idx:
@@ -172,28 +187,31 @@ def makePage( histos, fileName, fileDescr, separateFiles, logscale):
     from ROOT import kBlue,gPad
     log = logging.getLogger('pyroplot')
     cans = {}
+    log.info( "Drawing histograms .." )
     for idx, name in enumerate(sorted(histos.keys())):
         if separateFiles:
             log.debug( "Creating new canvas with index %d."%(idx))
             c=Canvas( 600, 800)
             cans[name]=c
-            markCanvas(c, fileName+" "+fileDescr, 0.05, y = 0.009, size = 0.025, color = 2 )
+            markCanvas(c, fileName, 0.05, y = 0.009, size = 0.025, color = 2 )
         if not separateFiles and (idx)%6 == 0:
             log.debug( "Creating new canvas with index %d."%(idx/6))
             # start a new canvas
             c=Canvas( 600, 800)
-            cans[name]=c
+            cans[fileName+'/'+name]=c
             c.Divide(2,3)
-            markCanvas(c, fileName+" "+fileDescr, 0.05, y = 0.009, size = 0.025, color = 2 )
+            markCanvas(c, fileName, 0.05, y = 0.009, size = 0.025, color = 2 )
         # draw the histogram
         hist = histos[name]
-        log.debug( "Drawing histogram #" + str(idx%6+1) +": " + hist.GetName() + " in canvas #" + str(int(idx/6) ))
+        log.debug( "Drawing histogram #" + str(idx%6+1) +": " + hist.GetName() + " (" + hist.__class__.__name__ + ") in canvas #" + str(int(idx/6) ))
         hist.color = kBlue
         if not separateFiles:
             c.cd(idx%6+1)
         if logscale:
             gPad.SetLogy()
         plotHistos(histos=[hist],text=name)
+        if fileDescr:
+            markPad(text=fileDescr, x=.14, y=.8, size=0.041, color = 2)
     return cans
 
 
@@ -209,6 +227,7 @@ def makeComparisionPage( histodicts , fileNames, fileDescr, separateFiles):
     cans = {}
     colors = [ROOT.kBlue, ROOT.kRed+1,ROOT.kViolet-1, ROOT.kOrange+7,ROOT.kGreen-7,ROOT.kOrange-6,
               ROOT.kPink-9,ROOT.kTeal-6,ROOT.kBlue+4,ROOT.kAzure+2]
+    log.info( "Drawing histograms .." )
     # prepare set of histograms to compare to the reference on (the first)
     # loop over the reference set of histos (sorted by key):
     for hidx, refname in enumerate(sorted(histodicts[0].keys())):
@@ -226,7 +245,7 @@ def makeComparisionPage( histodicts , fileNames, fileDescr, separateFiles):
             cans[refname] = c
             c.Divide(3,4)
         # prepare histograms for drawing
-        log.info( "Drawing histogram #" + str(hidx+1) +" (" + refname + ") on canvas #" + str(len(cans)) )
+        log.debug( "Drawing histogram #" + str(hidx+1) +" (" + refname + ") on canvas #" + str(len(cans)) )
         hists = []
         ratiohists = []
         hiter = iter (histodicts)
@@ -289,19 +308,19 @@ def makeComparisionPage( histodicts , fileNames, fileDescr, separateFiles):
         #create legend
         legend = Legend(nentries=len(histodicts)+len(fileDescr)+1, leftmargin=0.25, 
                         topmargin=0.05, rightmargin=0.25, entryheight=0.05)
-        legend.AddEntry(histodicts[0][refname],label=os.path.basename(fileNames[0]), legendstyle="l")
+        legend.AddEntry(histodicts[0][refname],label=os.path.basename(fileNames[0]), style="l")
         if fileNames[0] in fileDescr:
             if fileDescr[fileNames[0]]:
-                legend.AddEntry(None,label=fileDescr[fileNames[0]],legendstyle="")
-        legend.AddEntry(None,label="(reference)",legendstyle="")
+                legend.AddEntry(None,label=fileDescr[fileNames[0]],style="")
+        legend.AddEntry(None,label="(reference)",style="")
         for idx,ratiohist in enumerate(ratiohists):
             legend.AddEntry(ratiohist,
                             label=os.path.basename(fileNames[idx+1]), 
-                            legendstyle="l")
+                            style="l")
             # add additional info if specified by the user
             if fileNames[idx+1] in fileDescr:
                 if fileDescr[fileNames[idx+1]]:
-                    legend.AddEntry(None,label=fileDescr[fileNames[idx+1]],legendstyle="")
+                    legend.AddEntry(None,label=fileDescr[fileNames[idx+1]],style="")
         legend.SetBorderSize(0)
         legend.SetMargin(0.3)
         legend.Draw()
@@ -332,9 +351,11 @@ def findHistogramsInFile(filename, regexlist, strict, verbose = False):
         # some header output only needed when listing the contents
         print "=================================="
         print " File: %s"%(filename)
+        print " (matched by regex) path/and/objectname"
         print "=================================="
     # open file and loop over it
-    with root_open(filename) as f:
+    f = root_open(filename)
+    try:
         # recursively walk through the file
         for path, dirs, objects in f.walk():
             nobj+=len(objects) # sum up every object we encounter
@@ -360,6 +381,8 @@ def findHistogramsInFile(filename, regexlist, strict, verbose = False):
                     else:
                         sys.stdout.write("( ) ")
                     print fullpath
+    finally:
+        f.close()
     log.info("%s: %d/%d objects selected."%(filename, len(selectedHistos),nobj))
     return selectedHistos
 
@@ -374,6 +397,7 @@ def loadHistogramsFromFile(filename, histonames, with2d, with3d):
     from rootpy.plotting import Hist
     histos = {}
     f =  root_open(filename);
+    nignored = 0
     for h in histonames:
         try:
             histo = f.Get(h)
@@ -385,39 +409,79 @@ def loadHistogramsFromFile(filename, histonames, with2d, with3d):
         if ((histo.__class__.__name__=="Hist" 
              or histo.__class__.__name__=="Profile")
             or ((with3d or with2d) and histo.__class__.__name__=="Hist2D")
-            or (with3d and histo.__class__.__name__=="Profile2D" 
-                or histo.__class__.__name__=="Hist3D")):
-            log.debug("%s inherits from Hist/TH1"%h)
+            or (with3d and (histo.__class__.__name__=="Profile2D" 
+                or histo.__class__.__name__=="Hist3D"))):
             histo.SetDirectory(0) # remove association with file
             histos[h] = histo
         else:
-            log.warn("IGNORING %s as it is of class '%s'. Enable with --with-2D or --with-3D"%(h,histo.__class__.__name__))
+            log.debug("IGNORING %s as it is of class '%s'"%(h,histo.__class__.__name__))
+            nignored += 1
     f.close()
     log.info("Loaded %d histograms from file %s"%(len(histos),filename))
+    if nignored:
+        log.info("IGNORED %d matching 2D/3D histograms: to see these use the --with-2D or --with-3D switches."%(nignored))
     return histos
 
 def run( argv = sys.argv ):
     # Must be done before :py:mod:`rootpy` logs any messages.
     import logging;
     log = logging.getLogger('pyroplot') # set up logging
-    try:
-        import rootpy
-        from rootpy import log; log = log["/pyroplot"]
-        rootpy.log.basic_config_colorized()
-    except ImportError:
-        log.error("Could not load the rootpy modules. Please install from http://www.rootpy.org/install.html")
-        exit(1)
+
     try:
         import ROOT
-        ROOT.gROOT.SetBatch(True)
-        ROOT.gErrorIgnoreLevel = 1001
     except ImportError:
-        log.error("Could not load the Python ROOT module. Please make sure that your ROOT installation is correctly set up and includes libPyROOT.so")
-        exit(1)
+        # module failed to load - maybe PYTHONPATH is not set correctly?
+        # guess the right path, but that is only possible if ROOTSYS is set:
+        if os.environ.get('ROOTSYS') is None:
+            print "ERROR: Could not load the Python ROOT module. Please make sure that your ROOT installation is compiled with Python support and that your PYTHONPATH is set correctly and includes libPyROOT.so"
+            exit(1)
+        sys.path.append(os.path.join(os.environ.get('ROOTSYS'),"lib"))
+        sys.path.append(os.path.join(os.environ.get('ROOTSYS'),"lib","root"))
+        # try again:
+        try:
+            import ROOT
+        except ImportError:
+            print "ERROR: Could not load the Python ROOT module. Please make sure that your ROOT installation is compiled with Python support and that your PYTHONPATH is set correctly and includes libPyROOT.so"
+            exit(1)
+
+    try:
+        import rootpy
+    except ImportError:
+        # rootpy is not installed; use (old) version provided with EUTelescope
+        # determine (real) path to subdirectory pymodules (relative to current path)
+        libdir = os.path.join(os.path.dirname(os.path.abspath(os.path.realpath(__file__))),"pymodules","rootpy")
+        # search for any rootpy folders
+        import glob
+        rootpydirs = glob.glob(libdir+"*")
+        if not rootpydirs:
+            print "Error: Could not find the rootpy module provided with EUTelescope in %s!"%(libdir)
+        else:
+            # add last entry to python search path (subfolder rootpy where the modules are located)
+            sys.path.append(rootpydirs[-1])
+        # try again loading the module
+        try:
+            import rootpy
+        except ImportError:
+            print "Error: Could not load the rootpy modules. Please install them from http://www.rootpy.org/install.html"
+            exit(1)
+        except SyntaxError:
+            req_version = (2,5)
+            cur_version = sys.version_info
+            if cur_version < req_version:
+                print "Error: Python version too old: due to its dependency on rootpy, this script requires a Python interpreter version 2.6 or later (installed: %s.%s.%s)!"%(cur_version[:3])
+                exit(1)
+            print "Error: Failed to load rootpy module! Possibly incompatible with installed Python version (%s.%s.%s)?"%(cur_version[:3])
+            exit(1)
+
+    from rootpy import log; log = log["/pyroplot"]
+    rootpy.log.basic_config_colorized()
+    ROOT.gROOT.SetBatch(True)
+    ROOT.gErrorIgnoreLevel = 1001
+
     import argparse
     # command line argument parsing
     parser = argparse.ArgumentParser(description="Python ROOT plotter - A tool for selecting and assembling histogram plots and comparision plots from multiple ROOT files at once")
-    parser.add_argument('--version', action='version', version='Revision: $Revision: 2654 $, $LastChangedDate: 2013-05-30 17:59:55 +0200 (Thu, 30 May 2013) $')
+    parser.add_argument('--version', action='version', version='Revision: $Revision: 2736 $, $LastChangedDate: 2013-06-18 16:32:36 +0200 (Tue, 18 Jun 2013) $')
     parser.add_argument("-l", "--log-level", default="info", help="Sets the verbosity of log messages where LEVEL is either debug, info, warning or error", metavar="LEVEL")
     parser.add_argument("--compare", action="store_true", default=False, help="Compare the selected histograms between files (ratio plots, chi2) where the first file provides the reference.")
     parser.add_argument("-log", "--log-scale", action="store_true", default=False, help="Uses a logarithmic scale for the y axis; only relevant when not using '--compare'.")
@@ -427,7 +491,7 @@ def run( argv = sys.argv ):
     parser.add_argument("-o","--output", default="./overview.pdf", help="Output path and file name. If the file does not end in '.pdf' it will be assumed to be a path and created if needed. If --one-file-per-histogram is set, this will be the output directory for the plots.", metavar="FILE/PATH")
     parser.add_argument("--with-2D","-2D", action="store_true", default=False, help="Also loads TH2-type histograms.")    
     parser.add_argument("--with-3D","-3D", action="store_true", default=False, help="Also loads TH3-type and Profile2D-type histograms, implies --with-2D.")    
-    parser.add_argument("--list-only", action="store_true", default=False, help="Do not generate plots but only list objects in ROOT file(s) and indicate which ones would be selected.")
+    parser.add_argument("--list-only", "--list", action="store_true", default=False, help="Do not generate plots but only list objects in ROOT file(s) and indicate which ones would be selected.")
     parser.add_argument("--strict", action="store_true", default=False, help="Require the selection to match the full histogram path and name (with implied '^' and '$') instead of only a partial match.")
     parser.add_argument("files", help="The files to be processed; additional info STRING to be included in the plot legend can be added by specifiying FILE:STRING", nargs='+')
     # parse the arguments
@@ -443,17 +507,22 @@ def run( argv = sys.argv ):
     log.setLevel(numeric_level)
     log.debug( "Command line arguments used: %s ", args )
 
+    log.debug("Using rootpy %s from %s"%(rootpy.__version__,rootpy.__file__))
+
     # laod and combine all specified reg ex
     regexs = []
     # first from file
     if args.selection_from_file:
-        with open(args.selection_from_file, 'r') as f:
+        f = open(args.selection_from_file, 'r')
+        try:
             lines = f.read().splitlines()
             for line in lines:
                 if line: # test if line is not empty (would match anything)
                     log.debug("Loading reg ex from file " + args.selection_from_file 
                               + ": '" + line +"'")
                     regexs.append(line)
+        finally:
+            f.close()
     if args.select:
         for arg in args.select:
             log.debug("Using reg ex from command line: " + arg)
@@ -461,14 +530,17 @@ def run( argv = sys.argv ):
     # still nothing to select? use default
     if not regexs:
         import inspect
-        filepath = os.path.realpath(os.path.abspath(os.path.join(os.path.split(inspect.getfile( inspect.currentframe() ))[0],"default.sel")))
+        filepath = os.path.join(os.path.dirname(os.path.abspath(os.path.realpath(__file__))),"default.sel")
         try:
-            with open(filepath, 'r') as f:
+            f = open(filepath, 'r')
+            try:
                 lines = f.read().splitlines()
                 for line in lines:
                     if line: # test if line is not empty (would match anything)
                         log.debug("Loading reg ex from file " + filepath + ": '" + line +"'")
                         regexs.append(line)
+            finally:
+                f.close()
         except IOError:
             log.warn("Could not find the file with the default selection ('"+filepath+"'), will use default of '.*' (select all)")
             regexs.append('.*')
