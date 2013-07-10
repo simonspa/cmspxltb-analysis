@@ -21,11 +21,12 @@
  
    # only needed in the last step to test the results of EUTel against a set of reference files:
     SET( stattestdir "$ENV{EUTELESCOPE}/test/stattest/bin" )
+    SET( datadir "/afs/desy.de/group/telescopes/EutelTestData/TestExampleDaturaNoDUT" )
     SET( referencedatadir "/afs/desy.de/group/telescopes/EutelTestData/TestExampleDaturaNoDUT" )
 
     SET( executable python -tt ${jobsubdir}/jobsub.py )
     # options: use config, use csv, change native path to central AFS location, reduce number of events to 200k
-    SET( jobsubOptions --config=${exampledir}/config.cfg -csv ${exampledir}/runlist.csv -o NativePath=${referencedatadir} -o MaxRecordNumber=200000)
+    SET( jobsubOptions --config=${exampledir}/config.cfg -csv ${exampledir}/runlist.csv -o NativePath=${datadir} -o MaxRecordNumber=100000)
 
 
     # all this regular expressions must be matched for the tests to pass.
@@ -192,6 +193,8 @@
         FAIL_REGULAR_EXPRESSION "${generic_fail_regex}"
 	# test depends on earlier steps
 	DEPENDS TestJobsubExampleDaturaNoDUTAlignRun
+	# fitter step sometimes takes a bit longer (in s)
+	TIMEOUT 2500
 	)
     # now check if the expected output files exist and look ok
     ADD_TEST( TestJobsubExampleDaturaNoDUTFitterLog sh -c "[ -f ${testdir}/output/logs/fitter-${PaddedRunNr}.zip ]" )
@@ -240,7 +243,7 @@
 	)
 
 
-    ADD_TEST( TestJobsubExampleDaturaNoDUTStatTestFitter sh -c "PYTHONPATH=$ROOTSYS/lib:$PYTHONPATH ${executable} --cdash  -g${testdir}/output/stattest_report_fitter.pdf ${referencedatadir}/StatTestConf_DaturaNoDUTFitter.qa ${testdir}/output/histograms/run${PaddedRunNr}-fitter.root ${referencedatadir}/run${PaddedRunNr}-tracking.root" )
+    ADD_TEST( TestJobsubExampleDaturaNoDUTStatTestFitter sh -c "PYTHONPATH=$ROOTSYS/lib:$PYTHONPATH ${executable} --cdash  -g${testdir}/output/stattest_report_fitter.pdf ${referencedatadir}/StatTestConf_DaturaNoDUTFitter.qa ${testdir}/output/histograms/run${PaddedRunNr}-fitter.root ${referencedatadir}/run${PaddedRunNr}-fitter.root" )
     SET_TESTS_PROPERTIES (TestJobsubExampleDaturaNoDUTStatTestFitter PROPERTIES
         # test will pass if ALL of the following expressions are matched
         PASS_REGULAR_EXPRESSION "${fit_pass_regex_1}"
@@ -259,7 +262,7 @@
   # STEP 1-5 VARIANTS USED FOR MEMCHECKS ONLY:
     SET( executable python -tt ${jobsubdir}/jobsub.py )
     # options for memcheck runs: reduced run range, plain output for valgrind parsing
-    SET( jobsubMemCheckOptions --config=${exampledir}/config.cfg -csv ${exampledir}/runlist.csv -o NativePath=${referencedatadir} -o MaxRecordNumber=2000 --plain)
+    SET( jobsubMemCheckOptions --config=${exampledir}/config.cfg -csv ${exampledir}/runlist.csv -o NativePath=${datadir} -o MaxRecordNumber=2000 --plain)
 
   # Converter run with reduced run range
     ADD_TEST( NAME TestJobsubExampleDaturaNoDUTConverterRunMemCheck

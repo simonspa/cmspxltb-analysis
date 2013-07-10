@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """
 Python ROOT plotter - A tool for selecting and assembling histogram
 plots and comparision plots from multiple ROOT files at once
@@ -481,7 +481,7 @@ def run( argv = sys.argv ):
     import argparse
     # command line argument parsing
     parser = argparse.ArgumentParser(description="Python ROOT plotter - A tool for selecting and assembling histogram plots and comparision plots from multiple ROOT files at once")
-    parser.add_argument('--version', action='version', version='Revision: $Revision: 2736 $, $LastChangedDate: 2013-06-18 16:32:36 +0200 (Tue, 18 Jun 2013) $')
+    parser.add_argument('--version', action='version', version='Revision: $Revision: 2757 $, $LastChangedDate: 2013-06-24 18:14:16 +0200 (Mon, 24 Jun 2013) $')
     parser.add_argument("-l", "--log-level", default="info", help="Sets the verbosity of log messages where LEVEL is either debug, info, warning or error", metavar="LEVEL")
     parser.add_argument("--compare", action="store_true", default=False, help="Compare the selected histograms between files (ratio plots, chi2) where the first file provides the reference.")
     parser.add_argument("-log", "--log-scale", action="store_true", default=False, help="Uses a logarithmic scale for the y axis; only relevant when not using '--compare'.")

@@ -1,4 +1,4 @@
-// Version: $Id: EUTelMille.h 2537 2013-04-09 12:29:00Z spanns $
+// Version: $Id: EUTelMille.h 2743 2013-06-20 12:29:29Z hperrey $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -425,6 +425,7 @@ namespace eutelescope {
     IntVec _FixedPlanes_sensorIDs; //this is going to be
     //set by the user.
     
+    StringVec _pedeSteerAddCmds; // allows user-added commands in the pede steering file
 
 
     int _maxTrackCandidates;

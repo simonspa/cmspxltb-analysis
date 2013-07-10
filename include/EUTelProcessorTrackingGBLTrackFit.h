@@ -75,16 +75,29 @@ namespace eutelescope {
          */
         virtual void end();
 
-
-
-    public:
-        /** Prepare MILLIPEDE steering file */
+    private:
+        /** Prepare MILLEPEDE steering file */
         void writeMilleSteeringFile();
 
+        /** Rename MILLEPEDE result file */
+        void moveMilleResultFile( const string&, const string& );
+        
+        /** Parse MILLEPEDE result file
+         * and create output collection
+         */
+        bool parseMilleOutput( const string& );
+        
+        /** Run pede executable to solve alignment problem */
+        void runPede();
+
+        /** Generate MILLEPEDE parameter labels */
+        void fillMilleParametersLabels();
+       
+    public:
         /** Histogram booking */
         void bookHistograms();
 
-
+        
         // Processor parameters
 
     public:
@@ -99,24 +112,27 @@ namespace eutelescope {
 
         /** Alignment mode */
         int _alignmentMode;
-
-        /** Parameter ids */
-        IntVec _xShiftsVec;
+      
+        /** GBL M-estimator option */
+        string _mEstimatorType;
         
         /** Parameter ids */
-        IntVec _yShiftsVec;
+        map<int,int> _xShiftsMap;
         
         /** Parameter ids */
-        IntVec _zShiftsVec;
+        map<int,int> _yShiftsMap;
         
         /** Parameter ids */
-        IntVec _xRotationsVec;
+        map<int,int> _zShiftsMap;
         
         /** Parameter ids */
-        IntVec _yRotationsVec;
+        map<int,int> _xRotationsMap;
         
         /** Parameter ids */
-        IntVec _zRotationsVec;
+        map<int,int> _yRotationsMap;
+        
+        /** Parameter ids */
+        map<int,int> _zRotationsMap;
         
         /** Mille binary filename */
         string _milleBinaryFilename;
@@ -124,14 +140,38 @@ namespace eutelescope {
         /** Mille steering filename */
         string _milleSteeringFilename;
 
+        /** Mille result filename */
+        string _milleResultFileName;
+        
+        /** Allows user-added commands in the pede steering file */
+        StringVec _pedeSteerAddCmds;
+        
         /** Alignment plane ids*/
         IntVec _alignmentPlaneIds;
         
-        /** Alignment plane ids*/
-        IntVec _fixedAlignmentPlaneIds;
+        /** Alignment X shift plane ids to be fixed */
+        IntVec _fixedAlignmentXShfitPlaneIds;
+        
+        /** Alignment Y shift plane ids to be fixed */
+        IntVec _fixedAlignmentYShfitPlaneIds;
+        
+        /** Alignment Z shift plane ids to be fixed */
+        IntVec _fixedAlignmentZShfitPlaneIds;
+        
+        /** Alignment X rotation plane ids to be fixed */
+        IntVec _fixedAlignmentXRotationPlaneIds;
+        
+        /** Alignment Y rotation plane ids to be fixed */
+        IntVec _fixedAlignmentYRotationPlaneIds;
+        
+        /** Alignment Z rotation plane ids to be fixed */
+        IntVec _fixedAlignmentZRotationPlaneIds;
         
         /** Automatic pede run flag*/
         bool _runPede;
+        
+        /** Alignment constants file name */
+        string _alignmentConstantLCIOFile;
         
         /** Maximum value of track chi2 for millipede */
         double _maxChi2Cut;
@@ -162,8 +202,8 @@ namespace eutelescope {
 
     private:
 
-        struct AlignmentConstants {
-            AlignmentConstants() : _xResiduals(), _nxResiduals(), _yResiduals(), _nyResiduals() {};
+        struct SeedAlignmentConstants {
+            SeedAlignmentConstants() : _xResiduals(), _nxResiduals(), _yResiduals(), _nyResiduals() {};
             std::map< int, double > _xResiduals;   //! sum all x residuals for given plane id
             std::map< int, int >    _nxResiduals;  //! number of residuals used to calculate mean for given plane id
             std::map< int, double > _yResiduals;   //! sum all y residuals for given plane id
@@ -171,7 +211,7 @@ namespace eutelescope {
         };
 
         /** Initial alignment constants */
-        AlignmentConstants _alignmentConstants;
+        SeedAlignmentConstants _seedAlignmentConstants;
 
 
     private:

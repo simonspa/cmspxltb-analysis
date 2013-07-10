@@ -15,6 +15,7 @@
 #include "EUTelRunHeaderImpl.h"
 #include "EUTelEventImpl.h"
 #include "EUTelAlignmentConstant.h"
+#include "EUTelGeometryTelescopeGeoDescription.h"
 
 // marlin includes ".h"
 #include "marlin/Processor.h"
@@ -58,7 +59,15 @@ using namespace marlin;
 using namespace eutelescope;
 using namespace gear;
 
-EUTelProcessorApplyAlign::EUTelProcessorApplyAlign () :Processor("EUTelProcessorApplyAlignment") {
+EUTelProcessorApplyAlign::EUTelProcessorApplyAlign () : Processor("EUTelProcessorApplyAlignment"),
+_inputHitCollectionName("hit"),
+_alignmentCollectionName("alignment"),
+_outputHitCollectionName("correctedHit"),
+_correctionMethod(0),
+_iRun(0),
+_iEvt(0),
+_lookUpTable()
+{
   _description = "Apply alignment constants to hit collection";
 
   registerInputCollection (LCIO::TRACKERHIT, "InputHitCollectionName",
@@ -87,16 +96,7 @@ void EUTelProcessorApplyAlign::init () {
     exit(-1);
   }
 
-  _siPlanesParameters  = const_cast<SiPlanesParameters* > (&(Global::GEAR->getSiPlanesParameters()));
-  _siPlanesLayerLayout = const_cast<SiPlanesLayerLayout*> ( &(_siPlanesParameters->getSiPlanesLayerLayout() ));
-
-  _siPlaneZPosition = new double[ _siPlanesLayerLayout->getNLayers() ];
-  for ( int iPlane = 0 ; iPlane < _siPlanesLayerLayout->getNLayers(); iPlane++ ) {
-    _siPlaneZPosition[ iPlane ] = _siPlanesLayerLayout->getLayerPositionZ(iPlane);
-  }
-
   _isFirstEvent = true;
-  fevent = true;
 }
 
 void EUTelProcessorApplyAlign::processRunHeader (LCRunHeader * rdr) {
@@ -107,13 +107,7 @@ void EUTelProcessorApplyAlign::processRunHeader (LCRunHeader * rdr) {
 
 void EUTelProcessorApplyAlign::processEvent (LCEvent * event) {
   ++_iEvt;
-  if ( _iEvt % 10000 == 0 )
-    streamlog_out ( MESSAGE4 ) << "Processing event "
-                               << setw(6) << setiosflags(ios::right) << event->getEventNumber() << " in run "
-                               << setw(6) << setiosflags(ios::right) << setfill('0')  << event->getRunNumber()
-                               << setfill(' ')
-                               << " (Total = " << setw(10) << _iEvt << ")" << resetiosflags(ios::left) << endl;
-
+  
   EUTelEventImpl * evt = static_cast<EUTelEventImpl*> (event);
 
   if ( evt->getEventType() == kEORE ) {
@@ -128,7 +122,7 @@ void EUTelProcessorApplyAlign::processEvent (LCEvent * event) {
     LCCollectionVec * inputCollectionVec         = dynamic_cast < LCCollectionVec * > (evt->getCollection(_inputHitCollectionName));
     LCCollectionVec * alignmentCollectionVec     = dynamic_cast < LCCollectionVec * > (evt->getCollection(_alignmentCollectionName));
     
-    if (fevent) {
+    if (_isFirstEvent) {
       streamlog_out ( MESSAGE5 ) << "The alignment collection contains: " <<  alignmentCollectionVec->size()
                                 << " planes " << endl;
       
@@ -143,7 +137,6 @@ void EUTelProcessorApplyAlign::processEvent (LCEvent * event) {
                                 << " is in position " << mapIter->second << endl;
       }
       _isFirstEvent = false;
-      fevent = false;
     }
 
     LCCollectionVec * outputCollectionVec = new LCCollectionVec(LCIO::TRACKERHIT);
@@ -151,7 +144,7 @@ void EUTelProcessorApplyAlign::processEvent (LCEvent * event) {
     for (size_t iHit = 0; iHit < inputCollectionVec->size(); iHit++) {
       TrackerHitImpl   * inputHit   = dynamic_cast< TrackerHitImpl * >  ( inputCollectionVec->getElementAt( iHit ) ) ;
       // now we have to understand which layer this hit belongs to.
-      int sensorID = guessSensorID( inputHit );
+      int sensorID = Utility::GuessSensorID(inputHit);
 
       // copy the input to the output, at least for the common part
       TrackerHitImpl   * outputHit  = new TrackerHitImpl;
@@ -172,12 +165,20 @@ void EUTelProcessorApplyAlign::processEvent (LCEvent * event) {
         EUTelAlignmentConstant * alignment = static_cast< EUTelAlignmentConstant * >
           ( alignmentCollectionVec->getElementAt( positionIter->second ) );
 	// Rotations
-        TVector3 inputVec( inputPosition[0], inputPosition[1], 0. );
-        inputVec.RotateZ( -alignment->getGamma() );
+        double xPlaneCenter    = geo::gGeometry().siPlaneXPosition( sensorID );
+        double yPlaneCenter    = geo::gGeometry().siPlaneXPosition( sensorID );
+        double zPlaneThickness = geo::gGeometry()._siPlanesLayerLayout->getSensitiveThickness( geo::gGeometry().sensorIDtoZOrder(sensorID) );
+        double zPlaneCenter    = geo::gGeometry().siPlaneZPosition( sensorID ) + zPlaneThickness / 2.;
+
+        TVector3 inputVec( inputPosition[0] - xPlaneCenter, inputPosition[1] - yPlaneCenter, inputPosition[2] - zPlaneCenter );
         inputVec.RotateX( -alignment->getAlpha() );
         inputVec.RotateY( -alignment->getBeta() );
-        outputPosition[0] = inputVec.X();
-        outputPosition[1] = inputVec.Y();
+        inputVec.RotateZ( -alignment->getGamma() );
+        
+
+        outputPosition[0] = inputVec.X() + xPlaneCenter;
+        outputPosition[1] = inputVec.Y() + yPlaneCenter;
+        outputPosition[2] = inputVec.Z() + zPlaneCenter;
 	// Shifts
 	outputPosition[0] -= alignment->getXOffset();
 	outputPosition[1] -= alignment->getYOffset();
@@ -210,37 +211,7 @@ void EUTelProcessorApplyAlign::processEvent (LCEvent * event) {
 
 void EUTelProcessorApplyAlign::end() {
   streamlog_out ( MESSAGE2 ) <<  "Successfully finished" << endl;
-  delete [] _siPlaneZPosition;
 }
-
-int EUTelProcessorApplyAlign::guessSensorID( TrackerHitImpl * hit ) {
-  int sensorID = -1;
-  double minDistance =  numeric_limits< double >::max() ;
-  double * hitPosition = const_cast<double * > (hit->getPosition());
-
-  for ( int iPlane = 0 ; iPlane < _siPlanesLayerLayout->getNLayers(); ++iPlane ) {
-    double distance = std::abs( hitPosition[2] - _siPlaneZPosition[ iPlane ] );
-    if ( distance < minDistance ) {
-      minDistance = distance;
-      sensorID = _siPlanesLayerLayout->getID( iPlane );
-    }
-  }
-  if  ( _siPlanesParameters->getSiPlanesType() == _siPlanesParameters->TelescopeWithDUT ) {
-    double distance = std::abs( hitPosition[2] - _siPlanesLayerLayout->getDUTPositionZ() );
-    if( distance < minDistance )
-      {
-        minDistance = distance;
-        sensorID = _siPlanesLayerLayout->getDUTID();
-      }
-  }
-  if ( minDistance > 5 /* mm */ ) {
-    // advice the user that the guessing wasn't successful 
-    streamlog_out( WARNING3 ) << "A hit was found " << minDistance << " mm far from the nearest plane\n"
-      "Please check the consistency of the data with the GEAR file " << endl;
-    throw SkipEventException(this);
-  }
-  return sensorID;
-}
-
 
 #endif
+

@@ -1,6 +1,6 @@
 // Contact: Igor Rubinskiy, DESY <mailto:igorrubinsky@gmail.com>
 //
-// Version: $Id: EUTelMille.cc 2712 2013-06-13 09:30:26Z eicht $
+// Version: $Id: EUTelMille.cc 2759 2013-06-25 08:05:08Z hperrey $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -279,6 +279,8 @@ EUTelMille::EUTelMille () : Processor("EUTelMille") {
   registerOptionalParameter("GeneratePedeSteerfile","Generate a steering file for the pede program.",_generatePedeSteerfile, static_cast <int> (0));
 
   registerOptionalParameter("PedeSteerfileName","Name of the steering file for the pede program.",_pedeSteerfileName, string("steer_mille.txt"));
+
+  registerOptionalParameter("PedeSteeringAdditionalCmds","FOR EXPERTS: List of commands that should be included in the pede steering file. Use '\\' to seperate options and introduce a line break.",_pedeSteerAddCmds, StringVec());
 
   registerOptionalParameter("RunPede","Execute the pede program using the generated steering file.",_runPede, static_cast <bool> (true));
 
@@ -3109,8 +3111,13 @@ void EUTelMille::end() {
       } // end loop over all planes
 
       steerFile << endl;
-      steerFile << "chiscut 5.0 2.5" << endl;
-      steerFile << "outlierdownweighting 4" << endl;
+      for(StringVec::iterator it = _pedeSteerAddCmds.begin(); it != _pedeSteerAddCmds.end(); ++it) {
+	// two backslashes will be interpreted as newline
+	if (*it == "\\\\")
+	  steerFile << endl;
+	else
+	  steerFile << *it << " ";
+      }
       steerFile << endl;
       steerFile << "method inversion 10 0.001" << endl;
       steerFile << endl;

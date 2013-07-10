@@ -1,5 +1,5 @@
 // Author Aleksander Zarnecki, University of Warsaw <mailto:zarnecki@fuw.edu.pl>
-// Version $Id: EUTelMAPSdigi.cc 2489 2013-03-21 12:16:02Z hamnett $
+// Version $Id: EUTelMAPSdigi.cc 2828 2013-07-08 12:11:25Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -82,7 +82,52 @@ std::string EUTelMAPSdigi::_weightedProfileName             = "WeightedCharge";
 #endif
 
 
-EUTelMAPSdigi::EUTelMAPSdigi () : Processor("EUTelMAPSdigi") {
+EUTelMAPSdigi::EUTelMAPSdigi () 
+: Processor("EUTelMAPSdigi"),
+  _maxStepInCharge(0.0),
+  _maxStepInLength(0.0),
+  _integMaxNumberPixelsAlongL(0),
+  _integMaxNumberPixelsAlongW(0),
+  _chargeAttenuationLength(0.0),
+  _chargeReflectedContribution(0.0),
+  _gslFunctionCalls(0),
+  _integPixelSegmentsAlongL(0),
+  _integPixelSegmentsAlongW(0),
+  _integPixelSegmentsAlongH(0),
+  _useCommonIntegrationStorage(false),
+  _ionizationEnergy(0.0),
+  _DigiLayerIDs(),
+  _depositedChargeScaling(),
+  _applyPoissonSmearing(),
+  _adcGain(),
+  _adcGainVariation(),
+  _adcNoise(),
+  _adcOffset(),
+  _zeroSuppressionThreshold(),
+  _pixelReadoutType(),
+  _adcRange(),
+  _simhitCollectionName(""),
+  _pixelCollectionName(""),
+  _debugCount(0),
+  _fillChargeProfiles(false),
+  zsFrame(NULL),
+  _iRun(0),
+  _iEvt(0),
+  _conversionIdMap(),
+  _digiIdMap(),
+  _siPlanesParameters(NULL),
+  _siPlanesLayerLayout(NULL),
+  _aidaHistoMap(),
+  _histogramSwitch(false),
+  _mokkaPath(0.0),
+  _mokkaDeposit(0.0),
+  _pixelChargeMap(NULL),
+  _pixelChargeMapCollection(),
+  _vectorOfPixels(),
+  _pixelIterator(),
+  _integrationStorage(NULL),
+  _trackerDataMap()
+   {
 
   // modify processor description
   _description =

@@ -1,4 +1,4 @@
-// Version: $Id: EUTelDafBase.cc 2488 2013-03-21 10:45:22Z hamnett $
+// Version: $Id: EUTelDafBase.cc 2795 2013-06-26 13:35:51Z rubinsky $
 
 // Author Havard Gjersdal, UiO(haavagj@fys.uio.no)
 /*!
@@ -877,8 +877,8 @@ void EUTelDafBase::bookHistos(){
     _aidaHistoMap[bname + "mcresidualX"] =  AIDAProcessor::histogramFactory(this)->createHistogram1D( bname + "mcresidualX", 200,  residminX, residmaxX );
     _aidaHistoMap[bname + "mcresidualY"] =  AIDAProcessor::histogramFactory(this)->createHistogram1D( bname + "mcresidualY", 200,  residminX, residmaxX );
 
-    _aidaHistoMap[bname + "residualX"] =  AIDAProcessor::histogramFactory(this)->createHistogram1D( bname + "residualX",6000, residminX, residmaxX);
-    _aidaHistoMap[bname + "residualY"] =  AIDAProcessor::histogramFactory(this)->createHistogram1D( bname + "residualY",6000, residminX, residmaxX);
+    _aidaHistoMap[bname + "residualX"] =  AIDAProcessor::histogramFactory(this)->createHistogram1D( bname + "residualX",600, residminX, residmaxX);
+    _aidaHistoMap[bname + "residualY"] =  AIDAProcessor::histogramFactory(this)->createHistogram1D( bname + "residualY",600, residminX, residmaxX);
     //Resids 2D // profiles
     _aidaHistoMapProf1D[bname+"residualdXvsX"]= AIDAProcessor::histogramFactory(this)->createProfile1D(bname+"dXvsX", 200, -10000., 10000.,   residminX, residmaxX );
     _aidaHistoMapProf1D[bname+"residualdYvsX"]= AIDAProcessor::histogramFactory(this)->createProfile1D(bname+"dXvsY", 200, -10000., 10000.,   residminX, residmaxX );
