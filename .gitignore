@@ -6,3 +6,4 @@ eudaq
 gbl
 *.pyc
 millepede2
+build_env.sh

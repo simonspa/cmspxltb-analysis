@@ -18,28 +18,18 @@ namespace eutelescope {
 
     EUTelTrackFinder::EUTelTrackFinder() : _isReady(kIsNotReady),
                                            _searchResult(kFailed),
-                                           _name("DefaultTrackFinder") {
-        _allHits.clear();
-        _trackCandidates.clear();
-
-        return;
-    }
+                                           _name("DefaultTrackFinder"),
+                                           _allHits(),
+                                           _trackCandidates() { }
 
     EUTelTrackFinder::EUTelTrackFinder(
             std::string name ) :
                                             _isReady(kIsNotReady),
                                             _searchResult(kFailed),
-                                            _name(name) {
-        _allHits.clear();
-        _trackCandidates.clear();
+                                            _name(name),
+                                            _allHits(),
+                                            _trackCandidates() { }
 
-        return;
-    }
-
-/*
-    EUTelTrackFinder::EUTelTrackFinder(const EUTelTrackFinder& orig) {
-    }
-*/
     EUTelTrackFinder::~EUTelTrackFinder() {
     }
     
@@ -62,7 +52,7 @@ namespace eutelescope {
         return _trackCandidates;
     }
 
-    void EUTelTrackFinder::SetAllHits( const std::map< int, EVENT::TrackerHitVec >& allHits) {
+    void EUTelTrackFinder::SetAllHits( const std::vector< EVENT::TrackerHitVec >& allHits) {
         
         streamlog_out( DEBUG1 ) << "EUTelTrackFinder::SetAllHits()." << std::endl;
         streamlog_out( DEBUG1 ) << " Hits for track search ready." << std::endl;
@@ -72,7 +62,7 @@ namespace eutelescope {
 	return;
     }
 
-    std::map< int, EVENT::TrackerHitVec > EUTelTrackFinder::GetAllHits() const {
+    std::vector< EVENT::TrackerHitVec > EUTelTrackFinder::GetAllHits() const {
         return _allHits;
     }
 

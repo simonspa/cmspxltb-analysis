@@ -1,4 +1,4 @@
-// Version: $Id: EUTelSparseDataImpl.tcc 2606 2013-05-13 17:42:43Z hperrey $
+// Version: $Id: EUTelSparseDataImpl.tcc 2719 2013-06-13 13:40:30Z spanns $
 // -*- mode: c++; mode: auto-fill; mode: flyspell-prog; -*-
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -15,9 +15,9 @@ namespace eutelescope {
 
   template<class PixelType> 
   EUTelSparseDataImpl<PixelType>::EUTelSparseDataImpl(IMPL::TrackerDataImpl * data) :
+    _trackerData(),
     _nElement(0),
-    _type(kUnknownPixelType),
-    _trackerData()
+    _type(kUnknownPixelType)
   {
 
     std::auto_ptr<PixelType> pixel ( new PixelType );

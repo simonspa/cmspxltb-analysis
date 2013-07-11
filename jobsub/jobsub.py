@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 """
 jobsub: a tool for EUTelescope job submission to Marlin 
 
@@ -161,7 +161,7 @@ def loadparamsfromcsv(csvfilename, runs):
         finally:
             csvfile.close()
     except csv.Error, e:
-        log.error("Problem loading the csv file '"+csvfilename+"'({0}): {1}".format(e.errno, e.strerror))
+        log.error("Problem loading the csv file '"+csvfilename+"'(%s): %s"%(e.errno, e.strerror))
         exit(1)
     return parameters_csv
 
@@ -343,10 +343,9 @@ def main(argv=None):
         log.debug("No locally installed argparse module found; trying the package provided with jobsub.")
         # argparse is not installed; use (old) version provided with jobsub
         # determine path to subdirectory
-        import inspect
-        cmd_subfolder = os.path.realpath(os.path.abspath(os.path.join(os.path.split(inspect.getfile( inspect.currentframe() ))[0],"pymodules/argparse")))
-        if cmd_subfolder not in sys.path:
-            sys.path.insert(0, cmd_subfolder)
+        libdir = os.path.join(os.path.dirname(os.path.abspath(os.path.realpath(__file__))),"pymodules","argparse")
+        if libdir not in sys.path:
+            sys.path.append(libdir)
         # try again loading the module
         try:
             import argparse
@@ -361,7 +360,7 @@ def main(argv=None):
 
     # command line argument parsing
     parser = argparse.ArgumentParser(prog=progName, description="A tool for the convenient run-specific modification of Marlin steering files and their execution through the Marlin processor")
-    parser.add_argument('--version', action='version', version='Revision: $Revision: 2642 $, $LastChangedDate: 2013-05-24 09:28:18 +0200 (Fri, 24 May 2013) $')
+    parser.add_argument('--version', action='version', version='Revision: $Revision: 2808 $, $LastChangedDate: 2013-06-27 14:52:26 +0200 (Thu, 27 Jun 2013) $')
     parser.add_argument('--option', '-o', action='append', metavar="NAME=VALUE", help="Specify further options such as 'beamenergy=5.3'. This switch be specified several times for multiple options or can parse a comma-separated list of options. This switch overrides any config file options.")
     parser.add_argument("-c", "--conf-file", "--config", help="Load specified config file with global and task specific variables", metavar="FILE")
     parser.add_argument("--concatenate", action="store_true", default=False, help="Modifies run range treatment: concatenate all runs into first run (e.g. to combine runs for alignment) by combining every options that includes the string '@RunRange@' multiple times, once for each run of the range specified.")
@@ -440,7 +439,7 @@ def main(argv=None):
                 log.warning("Config file '%s' is missing a section [%s]!", args.conf_file, args.jobtask)
             log.info("Loaded config file %s", args.conf_file)
         except ConfigParser.InterpolationMissingOptionError, err: # if interpolation during config parsing fails
-            log.error('Bad value substitution in config file '+str(args.conf_file)+ ": missing '{0}' key in section [{1}] for option '{2}'.".format(err.reference, err.section, err.option))
+            log.error('Bad value substitution in config file '+str(args.conf_file)+ ": missing '%s' key in section [%s] for option '%s'."%(err.reference, err.section, err.option))
             if err.reference == "eutelescopepath":
                 log.error('EUTELESCOPE environment variable not set but required in config through "EUTelescopePath" key - please source build_env.sh in EUTelescope top directory or set variable manually.')
             return 1

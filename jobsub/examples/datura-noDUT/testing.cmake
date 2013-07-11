@@ -21,11 +21,12 @@
  
    # only needed in the last step to test the results of EUTel against a set of reference files:
     SET( stattestdir "$ENV{EUTELESCOPE}/test/stattest/bin" )
+    SET( datadir "/afs/desy.de/group/telescopes/EutelTestData/TestExampleDaturaNoDUT" )
     SET( referencedatadir "/afs/desy.de/group/telescopes/EutelTestData/TestExampleDaturaNoDUT" )
 
     SET( executable python -tt ${jobsubdir}/jobsub.py )
     # options: use config, use csv, change native path to central AFS location, reduce number of events to 200k
-    SET( jobsubOptions --config=${exampledir}/config.cfg -csv ${exampledir}/runlist.csv -o NativePath=${referencedatadir} -o MaxRecordNumber=200000)
+    SET( jobsubOptions --config=${exampledir}/config.cfg -csv ${exampledir}/runlist.csv -o NativePath=${datadir} -o MaxRecordNumber=100000)
 
 
     # all this regular expressions must be matched for the tests to pass.
@@ -69,7 +70,7 @@
     ADD_TEST( TestJobsubExampleDaturaNoDUTConverterHisto sh -c "[ -f ${testdir}/output/histograms/run${PaddedRunNr}-converter.root ]" )
     SET_TESTS_PROPERTIES (TestJobsubExampleDaturaNoDUTConverterHisto PROPERTIES DEPENDS TestJobsubExampleDaturaNoDUTConverterRun)
 
-    ADD_TEST( TestJobsubExampleDaturaNoDUTConverterHotpix sh -c "[ -f ${testdir}/output/database/run${PaddedRunNr}-hotpixel.slcio ] && lcio_check_col_elements --expelements 6  m26_hotpixel  ${testdir}/output/database/run${PaddedRunNr}-hotpixel.slcio" )
+    ADD_TEST( TestJobsubExampleDaturaNoDUTConverterHotpix sh -c "[ -f ${testdir}/output/database/run${PaddedRunNr}-hotpixel.slcio ] && lcio_check_col_elements --expelements 6  hotpixel_m26  ${testdir}/output/database/run${PaddedRunNr}-hotpixel.slcio" )
     SET_TESTS_PROPERTIES (TestJobsubExampleDaturaNoDUTConverterHotpix PROPERTIES DEPENDS TestJobsubExampleDaturaNoDUTConverterRun)
 
     ADD_TEST( TestJobsubExampleDaturaNoDUTConverterOutput sh -c "[ -f ${testdir}/output/lcio/run${PaddedRunNr}-converter.slcio ] && lcio_check_col_elements --expelements 6 zsdata_m26 ${testdir}/output/lcio/run${PaddedRunNr}-converter.slcio" )
@@ -102,7 +103,7 @@
     SET_TESTS_PROPERTIES (TestJobsubExampleDaturaNoDUTClusteringHisto PROPERTIES DEPENDS TestJobsubExampleDaturaNoDUTClusteringRun)
 
     # we expect an average of 24.4 clusters per event
-    ADD_TEST( TestJobsubExampleDaturaNoDUTClusteringOutput sh -c "[ -f ${testdir}/output/lcio/run${PaddedRunNr}-clustering.slcio ] && lcio_check_col_elements --average --expelements 24 m26_cluster ${testdir}/output/lcio/run${PaddedRunNr}-clustering.slcio" )
+    ADD_TEST( TestJobsubExampleDaturaNoDUTClusteringOutput sh -c "[ -f ${testdir}/output/lcio/run${PaddedRunNr}-clustering.slcio ] && lcio_check_col_elements --average --expelements 24 cluster_m26 ${testdir}/output/lcio/run${PaddedRunNr}-clustering.slcio" )
     SET_TESTS_PROPERTIES (TestJobsubExampleDaturaNoDUTClusteringOutput PROPERTIES DEPENDS TestJobsubExampleDaturaNoDUTClusteringRun)
 
 
@@ -192,17 +193,19 @@
         FAIL_REGULAR_EXPRESSION "${generic_fail_regex}"
 	# test depends on earlier steps
 	DEPENDS TestJobsubExampleDaturaNoDUTAlignRun
+	# fitter step sometimes takes a bit longer (in s)
+	TIMEOUT 2500
 	)
     # now check if the expected output files exist and look ok
     ADD_TEST( TestJobsubExampleDaturaNoDUTFitterLog sh -c "[ -f ${testdir}/output/logs/fitter-${PaddedRunNr}.zip ]" )
     SET_TESTS_PROPERTIES (TestJobsubExampleDaturaNoDUTFitterLog PROPERTIES DEPENDS TestJobsubExampleDaturaNoDUTFitterRun)
 
-    ADD_TEST( TestJobsubExampleDaturaNoDUTFitterHisto sh -c "[ -f ${testdir}/output/histograms/run${PaddedRunNr}-tracking.root ]" )
+    ADD_TEST( TestJobsubExampleDaturaNoDUTFitterHisto sh -c "[ -f ${testdir}/output/histograms/run${PaddedRunNr}-fitter.root ]" )
     SET_TESTS_PROPERTIES (TestJobsubExampleDaturaNoDUTFitterHisto PROPERTIES DEPENDS TestJobsubExampleDaturaNoDUTFitterRun)
 
     # we expect to see between 1 and 3 tracks in every event 
     # but tolerate if this is not the case in 40% of the events (empty events are counted)
-    ADD_TEST( TestJobsubExampleDaturaNoDUTFitterOutput sh -c "[ -f ${testdir}/output/lcio/run${PaddedRunNr}-tracking.slcio ] && lcio_check_col_elements --pedantic --expelements 2 --abselementerror 1 --releventerror .40 track0 ${testdir}/output/lcio/run${PaddedRunNr}-tracking.slcio" )
+    ADD_TEST( TestJobsubExampleDaturaNoDUTFitterOutput sh -c "[ -f ${testdir}/output/lcio/run${PaddedRunNr}-track.slcio ] && lcio_check_col_elements --pedantic --expelements 2 --abselementerror 1 --releventerror .40 track0 ${testdir}/output/lcio/run${PaddedRunNr}-track.slcio" )
     SET_TESTS_PROPERTIES (TestJobsubExampleDaturaNoDUTFitterOutput PROPERTIES DEPENDS TestJobsubExampleDaturaNoDUTFitterRun)
 
 #
@@ -240,7 +243,7 @@
 	)
 
 
-    ADD_TEST( TestJobsubExampleDaturaNoDUTStatTestFitter sh -c "PYTHONPATH=$ROOTSYS/lib:$PYTHONPATH ${executable} --cdash  -g${testdir}/output/stattest_report_fitter.pdf ${referencedatadir}/StatTestConf_DaturaNoDUTFitter.qa ${testdir}/output/histograms/run${PaddedRunNr}-tracking.root ${referencedatadir}/run${PaddedRunNr}-tracking.root" )
+    ADD_TEST( TestJobsubExampleDaturaNoDUTStatTestFitter sh -c "PYTHONPATH=$ROOTSYS/lib:$PYTHONPATH ${executable} --cdash  -g${testdir}/output/stattest_report_fitter.pdf ${referencedatadir}/StatTestConf_DaturaNoDUTFitter.qa ${testdir}/output/histograms/run${PaddedRunNr}-fitter.root ${referencedatadir}/run${PaddedRunNr}-fitter.root" )
     SET_TESTS_PROPERTIES (TestJobsubExampleDaturaNoDUTStatTestFitter PROPERTIES
         # test will pass if ALL of the following expressions are matched
         PASS_REGULAR_EXPRESSION "${fit_pass_regex_1}"
@@ -259,7 +262,7 @@
   # STEP 1-5 VARIANTS USED FOR MEMCHECKS ONLY:
     SET( executable python -tt ${jobsubdir}/jobsub.py )
     # options for memcheck runs: reduced run range, plain output for valgrind parsing
-    SET( jobsubMemCheckOptions --config=${exampledir}/config.cfg -csv ${exampledir}/runlist.csv -o NativePath=${referencedatadir} -o MaxRecordNumber=2000 --plain)
+    SET( jobsubMemCheckOptions --config=${exampledir}/config.cfg -csv ${exampledir}/runlist.csv -o NativePath=${datadir} -o MaxRecordNumber=2000 --plain)
 
   # Converter run with reduced run range
     ADD_TEST( NAME TestJobsubExampleDaturaNoDUTConverterRunMemCheck

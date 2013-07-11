@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelHitMaker.cc 2661 2013-06-01 22:33:37Z rubinsky $
+// Version $Id: EUTelHitMaker.cc 2784 2013-06-25 16:34:23Z rubinsky $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -274,19 +274,6 @@ void EUTelHitMaker::DumpReferenceHitDB()
   }
   event->addCollection( referenceHitCollection, _referenceHitCollectionName );
 
-  addReferenceHitCollection(event, "referenceHit01");
-  addReferenceHitCollection(event, "referenceHit02");
-  addReferenceHitCollection(event, "referenceHit11");
-  addReferenceHitCollection(event, "referenceHit12");
-  addReferenceHitCollection(event, "referenceHit21");
-  addReferenceHitCollection(event, "referenceHit22");
-  addReferenceHitCollection(event, "referenceHit31");
-  addReferenceHitCollection(event, "referenceHit32");
-  addReferenceHitCollection(event, "referenceHit41");
-  addReferenceHitCollection(event, "referenceHit42");
-  addReferenceHitCollection(event, "referenceHit51");
-  addReferenceHitCollection(event, "referenceHit52");
- 
   lcWriter->writeEvent( event );
   delete event;
   lcWriter->close();

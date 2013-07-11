@@ -7,23 +7,10 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6 FATAL_ERROR)
 # project name
 PROJECT( Eutelescope )
 
-# project version
-SET( ${PROJECT_NAME}_VERSION_MAJOR 0 )
-SET( ${PROJECT_NAME}_VERSION_MINOR 9 )
+# project version; before changing this, read README.release_procedure
+SET( ${PROJECT_NAME}_VERSION_MAJOR 1 )
+SET( ${PROJECT_NAME}_VERSION_MINOR 0 )
 SET( ${PROJECT_NAME}_VERSION_PATCH 0 )
-
-# IMPORTANT FOR RELEASES:
-# ======================
-# 0. if new major release: create new dev. branch for this release (e.g. v01-00-dev)
-#    - remove/adjust the lines below that are marked with "!RELEASE": these activate e.g. debugging/extra warnings and electric fence
-# 1. bump release version in this file (if needed)
-# IMPORTANT: if you also bump the trunk version, on euteltesting & co:
-#    - clean-up the old libraries and link eudaq against the new ones (see FAQ)
-# 2. create SVN pre-tag for this release (e.g. v01-00-00-rc1)
-# 3. TEST THIS RELEASE!
-# 4. create SVN tag for this release (e.g. v01-00-00)
-# 5. update web page, update installation documentation (including release-versions-eutel.py)
-# 6. announce! :)
 
 # These switches activate/deactivate compiler switches such as the
 # inclusion of debugging symbols and code optimizations. For actual
@@ -246,6 +233,14 @@ ADD_EUTELESCOPE_TOOL( pedestalmerge )
 # display some variables and write them to cache
 DISPLAY_STD_VARIABLES()
 
+# create some useful symbolic links in bin directory at install time
+install (CODE
+    "EXECUTE_PROCESS(COMMAND ln -sf ${PROJECT_SOURCE_DIR}/jobsub/jobsub.py ${PROJECT_SOURCE_DIR}/bin/jobsub)
+    EXECUTE_PROCESS(COMMAND ln -sf ${PROJECT_SOURCE_DIR}/jobsub/jobsub.py ${PROJECT_SOURCE_DIR}/bin/jobsub.py)
+    EXECUTE_PROCESS(COMMAND ln -sf ${PROJECT_SOURCE_DIR}/tools/pyroplot/pyroplot.py ${PROJECT_SOURCE_DIR}/bin/pyroplot.py)
+    EXECUTE_PROCESS(COMMAND ln -sf ${PROJECT_SOURCE_DIR}/tools/pyroplot/pyroplot.py ${PROJECT_SOURCE_DIR}/bin/pyroplot)
+    EXECUTE_PROCESS(COMMAND ln -sf ${PROJECT_SOURCE_DIR}/tools/parsepede/parsemilleout.sh ${PROJECT_SOURCE_DIR}/bin/parsemilleout.sh)"
+)
 
 #  _            _       
 # | |_ ___  ___| |_ ___ 
@@ -336,6 +331,7 @@ endif()
   INCLUDE(jobsub/examples/datura-alone/testing.cmake)
   INCLUDE(jobsub/examples/anemone-2FEI4/testing.cmake)
   INCLUDE(pysub/examples/anemone-2FEI4/testing.cmake)
+
   configure_file (
 	       ./CTestCustom.cmake.in   # set custom settings (e.g. tests to be skipped for valgrind)
 	       ${PROJECT_BINARY_DIR}/CTestCustom.cmake
