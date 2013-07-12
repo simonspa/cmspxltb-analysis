@@ -4,7 +4,7 @@
 
 // CMSPixel includes
 #include "EUTelConvertCMSPixel.h"
-#include "CMSPixelDecoder.h"
+#include "CMSPixelDecoder/CMSPixelDecoder.h"
 
 // EUTelescope includes
 #include "EUTELESCOPE.h"
@@ -60,8 +60,8 @@ using namespace eutelescope;
 
 
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
-std::string EUTelConvertCMSPixel::_hitMapHistoName             	= "hitMap";
-std::string EUTelConvertCMSPixel::_pulseHeightHistoName          	= "pulseHeight";
+std::string EUTelConvertCMSPixel::_hitMapHistoName              = "hitMap";
+std::string EUTelConvertCMSPixel::_pulseHeightHistoName        	= "pulseHeight";
 #endif
 
 
@@ -92,8 +92,6 @@ EUTelConvertCMSPixel::EUTelConvertCMSPixel ():DataSourceProcessor  ("EUTelConver
   registerProcessorParameter ("TB_type", "Choose the Testboard type. Can be: PSI_ATB, PSI_DTB, RAL",
                               _TB_type, static_cast < std::string >("RAL"));
 
-
-
   IntVec std_planes;
   for ( size_t iDetector = 0 ; iDetector < 16; ++iDetector ) {
     std_planes.push_back( iDetector );
@@ -104,14 +102,15 @@ EUTelConvertCMSPixel::EUTelConvertCMSPixel ():DataSourceProcessor  ("EUTelConver
                               
   //  registerOptionalParameter("eventSelection","Select the events to process: 0 - all, 1 - only with correct No. of ROC headers, 2 - only with corr. ROC headers and without bit errors in them.", _event_selection, static_cast< int > ( 0 ) );
 
-registerOptionalParameter ("haveTBMheaders", "Switch TBM mode on and off. This gives the possibility to read data without real or emulated TBM headers as seen from soem testboard FPGAs. TRUE will look for TBM headers and trailers.",
+  registerOptionalParameter ("haveTBMheaders", "Switch TBM mode on and off. This gives the possibility to read data without real or emulated TBM headers as seen from soem testboard FPGAs. TRUE will look for TBM headers and trailers.",
 			   _haveTBM, static_cast < bool >(true));
 
-//gisterOptionalParameter ("useIPBus", "Switch between 4/12bit readout (PSI ATB/DTB) and IPBus 16bit readout (RAL board).", _useIPBus, static_cast < bool >(false));
+  //  registerOptionalParameter ("denseData", "Switch between 4/12bit readout (PSI ATB/DTB) and IPBus 16bit readout (RAL board).", _useIPBus, static_cast < bool >(false));
 
- registerOptionalParameter("debugDecoder","Set decoder verbosity level: QUIET, SUMMARY, ERROR, WARNING, INFO, DEBUG, DEBUG1-4", _debugSwitch, static_cast< std::string > ( "SUMMARY" ) );
-registerProcessorParameter("HistogramFilling","Switch on or off the histogram filling", _fillHistos, static_cast< bool > ( true ) );
-                              
+  registerOptionalParameter("debugDecoder","Set decoder verbosity level: QUIET, SUMMARY, ERROR, WARNING, INFO, DEBUG, DEBUG1-4", _debugSwitch, static_cast< std::string > ( "SUMMARY" ) );
+  
+  registerProcessorParameter("HistogramFilling","Switch on or off the histogram filling", _fillHistos, static_cast< bool > ( true ) );
+ 
 }
 
 
@@ -175,8 +174,8 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
    
   EUTelEventImpl *evt = NULL;
   CMSPixelFileDecoder *readout;
-  // Initialize event vector:
-  std::vector< event > event_data;
+  // Initialize pixel vector:
+  std::vector< pixel > event_data;
   int64_t timestamp;
 
   // Initialize geometry:
@@ -190,14 +189,22 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
   // Construct new decoder:
   if(strcmp(_TB_type.c_str(),"RAL") == 0) {
     streamlog_out( DEBUG5 ) << "Constructing RAL testboard decoder..." << endl;
+    streamlog_out( DEBUG5 ) << "Parameters: file: " << _fileName << " nROCs: " << _noOfROC 
+			    << " flags: " << flags << " rocType: " << _ROC_type << endl;
     readout = new CMSPixelFileDecoderRAL(_fileName.c_str(),_noOfROC,flags,_ROC_type);
   }
   else if(strcmp(_TB_type.c_str(),"PSI_DTB") == 0) {
     streamlog_out( DEBUG5 ) << "Constructing PSI_DTB testboard decoder..." << endl;
+    streamlog_out( DEBUG5 ) << "Parameters: file: " << _fileName << " nROCs: " << _noOfROC 
+			    << " flags: " << flags << " rocType: " << _ROC_type 
+			    << " levels: " << _levelsFile << endl;
     readout = new CMSPixelFileDecoderPSI_DTB(_fileName.c_str(),_noOfROC,flags,_ROC_type,_levelsFile.c_str());
   }
   else if(strcmp(_TB_type.c_str(),"PSI_ATB") == 0) {
     streamlog_out( DEBUG5 ) << "Constructing PSI_ATB testboard decoder..." << endl;
+    streamlog_out( DEBUG5 ) << "Parameters: file: " << _fileName << " nROCs: " << _noOfROC 
+			    << " flags: " << flags << " rocType: " << _ROC_type
+			    << " levels: " << _levelsFile << endl;
     readout = new CMSPixelFileDecoderPSI_ATB(_fileName.c_str(),_noOfROC,flags,_ROC_type,_levelsFile.c_str());
   }
   else {
@@ -259,6 +266,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	// We didn't write single event - it was just impossible to open/read the data file:
 	if(eventNumber == 1) {
 	  streamlog_out ( WARNING ) << "The data file contained no valid event." << endl;
+	  readout->statistics.print();
 	  throw DataNotAvailableException("Failed to read from data file.");
 	}
 	// Else: we just reached EOF.
