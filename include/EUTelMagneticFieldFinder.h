@@ -25,10 +25,34 @@
 class IMPL::TrackImpl;
 class TrackerHit;
 
-class MeasurementLayer;
-
 namespace eutelescope {
+    
+    class MeasurementLayer {
+    private:
+        DISALLOW_COPY_AND_ASSIGN(MeasurementLayer)
+        
+    public:
+        MeasurementLayer();
+        
+        explicit MeasurementLayer( int );
+        
+        virtual ~MeasurementLayer();
 
+    public:
+        /** Add hit */
+        void addHit( EVENT::TrackerHit* );
+        
+        inline EVENT::TrackerHitVec& getHits() {
+            return _allHits;
+        }
+        
+    private:
+        /** Measurement layer id */
+        int _id;
+        /** Set of hit belonging to the measurement layer */
+        EVENT::TrackerHitVec _allHits;
+    };
+    
     class EUTelKalmanFilter : public EUTelTrackFitter {
     private:
         DISALLOW_COPY_AND_ASSIGN(EUTelKalmanFilter) // prevent users from making (default) copies of processors
@@ -49,13 +73,7 @@ namespace eutelescope {
         // Getters and Setters
     public:
 
-        inline EVENT::TrackerHitVec getHits() const {
-            return _allHits;
-        };
-
-        inline void setHits(EVENT::TrackerHitVec& hits) {
-            this->_allHits = hits;
-        }
+        void setHits( EVENT::TrackerHitVec& );
 
         inline int getAllowedMissingHits() const {
             return _allowedMissingHits;
@@ -73,15 +91,18 @@ namespace eutelescope {
             this->_maxTrackCandidates = maxTrackCandidates;
         }
 
-        inline void setBeamMomentum(const TLorentzVector& beam) {
+        inline void setBeamMomentum(double beam) {
             this->_beamDir = beam;
         }
 
-        inline TLorentzVector getBeamMomentum() const {
+        inline double getBeamMomentum() const {
             return _beamDir;
         }
 
     private:
+        /** Flush fitter data stored from previous event */
+        void reset();
+        
         /** Generate seed track candidates */
         void initialiseSeeds();
 
@@ -89,7 +110,7 @@ namespace eutelescope {
         void prepareLCIOTrack();
 
         /** Sort hits according to particles propagation direction */
-        void sortHitsByMeasurementLayers( const EVENT::TrackerHitVec& );
+        bool sortHitsByMeasurementLayers( const EVENT::TrackerHitVec& );
         
 
         // Kalman filter states and tracks
@@ -109,6 +130,9 @@ namespace eutelescope {
         // User supplied configuration of the fitter
     private:
 
+        /** Validity of supplied hits */
+        bool _isHitsOK;
+        
         /** Validity of user input flag */
         bool _isReady;
 
@@ -118,33 +142,11 @@ namespace eutelescope {
         /** Maximum number of track candidates to be stored */
         int _maxTrackCandidates;
 
-        /** Beam momentum vector */
-        TLorentzVector _beamDir;
+        /** Beam momentum [GeV/c] */
+        double _beamDir;
     };
 
-    
-    class MeasurementLayer {
-    private:
-        DISALLOW_COPY_AND_ASSIGN(MeasurementLayer)
-        
-    public:
-        MeasurementLayer();
-        
-        explicit MeasurementLayer( int );
-        
-        virtual ~MeasurementLayer();
-
-    public:
-        /** Add hit */
-        void addHit( EVENT::TrackerHit* );
-        
-    private:
-        /** Measurement layer id */
-        int _id;
-        /** Set of hit belonging to the measurement layer */
-        EVENT::TrackerHitVec _allHits;
-    };
-}
+} // namespace eutelescope
 
 #endif	/* EUTELMAGNETICFIELDFINDER_H */
 

@@ -533,6 +533,8 @@ void EUTelProcessorTrackingGBLTrackFit::check(LCEvent * evt) {
 }
 
 void EUTelProcessorTrackingGBLTrackFit::end() {
+    delete _trackFitter;
+    
     delete _milleGBL;
 
     writeMilleSteeringFile();
@@ -736,7 +738,7 @@ void EUTelProcessorTrackingGBLTrackFit::writeMilleSteeringFile() {
     // @TODO assumes that planes have ids 0..._nplanes !generaly wrong
     for (unsigned int help = 0; help < geo::gGeometry().nPlanes(); help++) {
 
-        const int sensorId = geo::gGeometry().sensorIDsVecZOrder()[help];
+        const int sensorId = geo::gGeometry().sensorZOrderToID(help+1);
         const bool isPlaneExcluded = std::find(_alignmentPlaneIds.begin(), _alignmentPlaneIds.end(), sensorId) == _alignmentPlaneIds.end();
         
         // check if plane has to be used as fixed
