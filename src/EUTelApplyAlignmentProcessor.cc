@@ -1,4 +1,4 @@
-// Version $Id: EUTelApplyAlignmentProcessor.cc 2823 2013-07-05 14:02:43Z rubinsky $
+// Version $Id: EUTelApplyAlignmentProcessor.cc 2869 2013-07-29 11:24:38Z spanns $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -299,7 +299,7 @@ void EUTelApplyAlignmentProcessor::CheckIOCollections(LCEvent* event)
             }   
             catch(...)
             {
-              streamlog_out ( WARNING2 ) <<  "_referenceHitCollectionName " << _referenceHitCollectionName.c_str() << " could not be retrieved, creating a dummy one (all elements are null) " << endl;
+              if(_iEvt%1000 == 0) streamlog_out ( WARNING2 ) <<  "_referenceHitCollectionName " << _referenceHitCollectionName.c_str() << " could not be retrieved, creating a dummy one (all elements are null) " << endl;
              
               _referenceHitVec = CreateDummyReferenceHitCollection();
               event->addCollection( _referenceHitVec, _referenceHitCollectionName );
