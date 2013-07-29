@@ -1,6 +1,6 @@
 // Contact: Igor Rubinskiy, DESY <mailto:igorrubinsky@gmail.com>
 //
-// Version: $Id: EUTelMille.cc 2759 2013-06-25 08:05:08Z hperrey $
+// Version: $Id: EUTelMille.cc 2870 2013-07-29 14:32:36Z spanns $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -719,7 +719,7 @@ void EUTelMille::findtracks2(
  for(size_t j =0; j < _allHitsArray[i].size(); j++)
     {
       int ihit = static_cast< int >(j);
-      streamlog_out(DEBUG9) << "ihit:" << ihit << std::endl;
+      streamlog_out(DEBUG5) << "ihit:" << ihit << std::endl;
 
       //if we are not in the last plane, call this method again
       if(i < _allHitsArray.size()-1)
