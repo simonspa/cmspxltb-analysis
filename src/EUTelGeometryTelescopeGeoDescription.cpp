@@ -24,7 +24,10 @@
 #include "TGeoMaterial.h"
 #include "TGeoBBox.h"
 #include "TVectorD.h"
+#include "TVector3.h"
 #include "TMath.h"
+
+#include <cstring>
 
 using namespace eutelescope;
 using namespace geo;
@@ -44,35 +47,78 @@ EVENT::DoubleVec EUTelGeometryTelescopeGeoDescription::siPlanesZPositions( ) con
 }
 
 double EUTelGeometryTelescopeGeoDescription::siPlaneXPosition( int planeID ) {
-    return _siPlaneXPosition[ this->_sensorIDtoZOrderMap[ planeID ] ];
+    std::map<int,int>::iterator it;
+    it = _sensorIDtoZOrderMap.find(planeID);
+    if ( it != _sensorIDtoZOrderMap.end() ) return _siPlaneXPosition[ _sensorIDtoZOrderMap[ planeID ] ];
+    return -999.;
 }
 
 double EUTelGeometryTelescopeGeoDescription::siPlaneYPosition( int planeID ) {
-    return _siPlaneYPosition[ this->_sensorIDtoZOrderMap[ planeID ] ];
+    std::map<int,int>::iterator it;
+    it = _sensorIDtoZOrderMap.find(planeID);
+    if ( it != _sensorIDtoZOrderMap.end() ) return _siPlaneYPosition[ _sensorIDtoZOrderMap[ planeID ] ];
+    return -999.;
 }
 
 double EUTelGeometryTelescopeGeoDescription::siPlaneZPosition( int planeID ) {
-    return _siPlaneZPosition[ this->_sensorIDtoZOrderMap[ planeID ] ];
+    std::map<int,int>::iterator it;
+    it = _sensorIDtoZOrderMap.find(planeID);
+    if ( it != _sensorIDtoZOrderMap.end() ) return _siPlaneZPosition[ _sensorIDtoZOrderMap[ planeID ] ];
+    return -999.;
 }
 
-std::map<double, int> EUTelGeometryTelescopeGeoDescription::getSensorIDMap( ) const {
-    return _sensorIDMap;
+double EUTelGeometryTelescopeGeoDescription::siPlaneXRotation( int planeID ) {
+    std::map<int,int>::iterator it;
+    it = _sensorIDtoZOrderMap.find(planeID);
+    if ( it != _sensorIDtoZOrderMap.end() ) return _siPlaneXRotation[ _sensorIDtoZOrderMap[ planeID ] ];
+    return -999.;
+}
+
+double EUTelGeometryTelescopeGeoDescription::siPlaneYRotation( int planeID ) {
+    std::map<int,int>::iterator it;
+    it = _sensorIDtoZOrderMap.find(planeID);
+    if ( it != _sensorIDtoZOrderMap.end() ) return _siPlaneYRotation[ _sensorIDtoZOrderMap[ planeID ] ];
+    return -999.;
+}
+
+double EUTelGeometryTelescopeGeoDescription::siPlaneZRotation( int planeID ) {
+    std::map<int,int>::iterator it;
+    it = _sensorIDtoZOrderMap.find(planeID);
+    if ( it != _sensorIDtoZOrderMap.end() ) return _siPlaneZRotation[ _sensorIDtoZOrderMap[ planeID ] ];
+    return -999.;
+}
+
+TVector3 EUTelGeometryTelescopeGeoDescription::siPlaneNormal( int planeID ) {
+    std::map<int,int>::iterator it;
+    it = _sensorIDtoZOrderMap.find(planeID);
+    if ( it != _sensorIDtoZOrderMap.end() ) {
+        TVector3 normVec( 0., 0., 1. );
+        normVec.RotateX( _siPlaneXRotation[ _sensorIDtoZOrderMap[ planeID ] ] );
+        normVec.RotateY( _siPlaneYRotation[ _sensorIDtoZOrderMap[ planeID ] ] );
+        normVec.RotateZ( _siPlaneZRotation[ _sensorIDtoZOrderMap[ planeID ] ] );
+        return normVec;
+    }
+    return TVector3(0.,0.,0.);
 }
 
 std::map<int, int> EUTelGeometryTelescopeGeoDescription::sensorIDstoZOrder( ) const {
     return _sensorIDtoZOrderMap;
 }
 
-int EUTelGeometryTelescopeGeoDescription::sensorIDtoZOrder( int planeID ) {
-    return _sensorIDtoZOrderMap[ planeID ];
+int EUTelGeometryTelescopeGeoDescription::sensorIDtoZOrder( int planeID ) const {
+    std::map<int,int>::const_iterator it;
+    it = _sensorIDtoZOrderMap.find(planeID);
+    if ( it != _sensorIDtoZOrderMap.end() ) return it->second;
+    return -1;
 }
 
-EVENT::IntVec EUTelGeometryTelescopeGeoDescription::sensorIDsVecZOrder( ) const {
-    return _sensorIDVecZOrder;
-}
-
-std::map<int, int> EUTelGeometryTelescopeGeoDescription::sensorIDsVecMap( ) const {
-    return _sensorIDVecMap;
+/** Sensor ID vector ordered according to their position along the Z axis (beam axis)
+ *  Numeration runs from 0 to nPlanes-1 */
+int EUTelGeometryTelescopeGeoDescription::sensorZOrderToID( int znumber ) const {
+    std::map<int,int>::const_iterator it;
+    it = _sensorZOrderToIDMap.find( znumber );
+    if ( it != _sensorZOrderToIDMap.end() ) return it->second;
+    return -1;
 }
 
 EVENT::IntVec EUTelGeometryTelescopeGeoDescription::sensorIDsVec( ) const {
@@ -84,12 +130,14 @@ _siPlanesParameters(0),
 _siPlanesLayerLayout(0),
 _sensorIDVec(),
 _sensorIDVecMap(),
-_sensorIDVecZOrder(),
+_sensorZOrderToIDMap(),
 _sensorIDtoZOrderMap(),
-_sensorIDMap(),
 _siPlaneXPosition(),
 _siPlaneYPosition(),
 _siPlaneZPosition(),
+_siPlaneXRotation(),
+_siPlaneYRotation(),
+_siPlaneZRotation(),
 _nPlanes(0),
 _geoManager(0)
 {
@@ -104,20 +152,26 @@ _geoManager(0)
     // sensor-planes in geometry navigation:
     _siPlanesParameters = const_cast<gear::SiPlanesParameters*> (&(marlin::Global::GEAR->getSiPlanesParameters()));
     _siPlanesLayerLayout = const_cast<gear::SiPlanesLayerLayout*> (&(_siPlanesParameters->getSiPlanesLayerLayout()));
-
+    
     // create an array with the z positions of each layer
     for (int iPlane = 0; iPlane < _siPlanesLayerLayout->getNLayers(); iPlane++) {
         _siPlaneXPosition.push_back(_siPlanesLayerLayout->getLayerPositionX(iPlane));
         _siPlaneYPosition.push_back(_siPlanesLayerLayout->getLayerPositionY(iPlane));
         _siPlaneZPosition.push_back(_siPlanesLayerLayout->getLayerPositionZ(iPlane));
-        _sensorIDMap.insert(std::make_pair(_siPlanesLayerLayout->getLayerPositionZ(iPlane), this->_siPlanesLayerLayout->getID(iPlane)));
+        _siPlaneXRotation.push_back(_siPlanesLayerLayout->getLayerRotationZY(iPlane)/180.*3.14159265359);
+        _siPlaneYRotation.push_back(_siPlanesLayerLayout->getLayerRotationZX(iPlane)/180.*3.14159265359);
+        _siPlaneZRotation.push_back(_siPlanesLayerLayout->getLayerRotationXY(iPlane)/180.*3.14159265359);
     }
 
     if (_siPlanesParameters->getSiPlanesType() == _siPlanesParameters->TelescopeWithDUT) {
         _siPlaneXPosition.push_back(_siPlanesLayerLayout->getDUTPositionX());
         _siPlaneYPosition.push_back(_siPlanesLayerLayout->getDUTPositionY());
         _siPlaneZPosition.push_back(_siPlanesLayerLayout->getDUTPositionZ());
-        _sensorIDMap.insert(std::make_pair(_siPlanesLayerLayout->getDUTPositionZ(), _siPlanesLayerLayout->getDUTID()));
+        // WARNING No DUT rotations in GEAR!!!!!!!!!!
+        // TODO: Need this in GEAR
+        _siPlaneXRotation.push_back(0.);
+        _siPlaneYRotation.push_back(0.);
+        _siPlaneZRotation.push_back(0.);
     }
 
     // sort the array with increasing z
@@ -129,9 +183,6 @@ _geoManager(0)
     // clear the sensor ID map
     _sensorIDVecMap.clear();
     _sensorIDtoZOrderMap.clear();
-
-    // clear the sensor ID vector (z-axis order)
-    _sensorIDVecZOrder.clear();
 
     double* keepZPosition = new double[ _siPlanesLayerLayout->getNLayers() ];
 
@@ -146,7 +197,7 @@ _geoManager(0)
         for (int jPlane = 0; jPlane < _siPlanesLayerLayout->getNLayers(); jPlane++)
             if (_siPlanesLayerLayout->getLayerPositionZ(jPlane) + 1e-06 < keepZPosition[ iPlane ]) sensorsToTheLeft++;
 
-        _sensorIDVecZOrder.push_back(sensorsToTheLeft);
+        _sensorZOrderToIDMap.insert(std::make_pair(sensorsToTheLeft, sensorID));        
         _sensorIDtoZOrderMap.insert(std::make_pair(sensorID, sensorsToTheLeft));
     }
 
@@ -173,10 +224,80 @@ void EUTelGeometryTelescopeGeoDescription::initializeTGeoDescription( string tge
     if( !_geoManager ) {
         streamlog_out( WARNING ) << "Can't read file " << tgeofilename << endl;
     }
-//    _geoManager->CloseGeometry();
+    _geoManager->CloseGeometry();
 //    #endif //USE_TGEO
 }
 
+/** Determine id of the sensor in which point is locate
+ * 
+ * @param globalPos 3D point in global reference frame
+ * @return sensorID or -999 if the point in outside of sensor volume
+ */
+int EUTelGeometryTelescopeGeoDescription::getSensorID( const float globalPos[] ) const {
+    streamlog_out(DEBUG2) << "EUTelGeometryTelescopeGeoDescription::getSensorID() " << std::endl;
+    
+    _geoManager->FindNode( globalPos[0], globalPos[1], globalPos[2] );
+    const char* volName = const_cast < char* > ( geo::gGeometry( )._geoManager->GetCurrentVolume( )->GetName( ) );
+    streamlog_out( DEBUG0 ) << "Point (" << globalPos[0] << "," << globalPos[1] << "," << globalPos[2] << ") found in volume: " << volName << std::endl;
+    const char* tok;
+    std::vector< std::string > tokens = Utility::stringSplit(std::string( volName ), ":", false );
+    
+    // sensor id must be stored in the last token
+    int id = -999;
+    std::size_t found = tokens.back().find_first_of("0123456789");
+    if ( found != std::string::npos ) id = atoi( tokens.back().c_str() );
+
+    int sensorID = -999;
+    if ( std::find( _sensorIDVec.begin(), _sensorIDVec.end(), id ) != _sensorIDVec.end() ) sensorID = id;
+    else streamlog_out(DEBUG3) << "Point (" << globalPos[0] << "," << globalPos[1] << "," << globalPos[2] << ") was not found inside any sensor!" << std::endl;
+    
+    streamlog_out( DEBUG0 ) << "SensorID: " << sensorID << std::endl;
+    
+    return sensorID;
+}
+
+void EUTelGeometryTelescopeGeoDescription::local2Master( int sensorID, const double localPos[], double globalPos[] ) {
+    streamlog_out(DEBUG2) << "EUTelGeometryTelescopeGeoDescription::local2Master() " << std::endl;
+    const double sensorCenterX = siPlaneXPosition( sensorID );
+    const double sensorCenterY = siPlaneYPosition( sensorID );
+    const double sensorCenterZ = siPlaneZPosition( sensorID );
+    
+    streamlog_out(DEBUG0) << "Senosor id: " << sensorID << std::endl;
+    streamlog_out(DEBUG0) << "Senosor center: " << "(" << sensorCenterX << "," << sensorCenterY << "," << sensorCenterZ << ")" << std::endl;
+    
+    _geoManager->FindNode( sensorCenterX, sensorCenterY, sensorCenterZ );    
+    _geoManager->LocalToMaster( localPos, globalPos );
+    
+    streamlog_out(DEBUG0) << std::fixed;
+    streamlog_out(DEBUG0) << "Local coordinates ( sensorID =  " << sensorID << " ) : " << std::endl;
+    streamlog_out(DEBUG0) << std::setw(10) << std::setprecision(5) << localPos[0] << std::setw(10) << std::setprecision(5) << localPos[1] << std::setw(10) << std::setprecision(5) << localPos[2] << std::endl;
+    streamlog_out(DEBUG0) << "Global coordinates ( sensorID =  " << sensorID << " ) : " << std::endl;
+    streamlog_out(DEBUG0) << std::setw(10) << std::setprecision(5) << globalPos[0] << std::setw(10) << std::setprecision(5) << globalPos[1] << std::setw(10) << std::setprecision(5) << globalPos[2] << std::endl;
+}
+
+void EUTelGeometryTelescopeGeoDescription::master2Local( const double globalPos[], double localPos[] ) {
+    streamlog_out(DEBUG2) << "EUTelGeometryTelescopeGeoDescription::master2Local() " << std::endl;
+    _geoManager->FindNode( globalPos[0], globalPos[1], globalPos[2] );    
+    _geoManager->MasterToLocal( globalPos, localPos );
+    
+    streamlog_out(DEBUG0) << std::fixed;
+    streamlog_out(DEBUG0) << "Global coordinates:" << std::endl;
+    streamlog_out(DEBUG0) << std::setw(10) << std::setprecision(5) << globalPos[0] << std::setw(10) << std::setprecision(5) << globalPos[1] << std::setw(10) << std::setprecision(5) << globalPos[2] << std::endl;
+    streamlog_out(DEBUG0) << "Local coordinates: " << std::endl;
+    streamlog_out(DEBUG0) << std::setw(10) << std::setprecision(5) << localPos[0] << std::setw(10) << std::setprecision(5) << localPos[1] << std::setw(10) << std::setprecision(5) << localPos[2] << std::endl;
+}
+
+const TGeoHMatrix* EUTelGeometryTelescopeGeoDescription::getHMatrix( const double globalPos[] ) {
+    streamlog_out(DEBUG2) << "EUTelGeometryTelescopeGeoDescription::getHMatrix() " << std::endl;
+    _geoManager->FindNode( globalPos[0], globalPos[1], globalPos[2] );    
+    const TGeoHMatrix* globalH = _geoManager->GetCurrentMatrix();
+    return globalH;
+}
+
+const gear::BField& EUTelGeometryTelescopeGeoDescription::getMagneticFiled() const {
+    streamlog_out(DEBUG2) << "EUTelGeometryTelescopeGeoDescription::getMagneticFiled() " << std::endl;
+    return marlin::Global::GEAR->getBField();
+}
 /** From ROOT's geometry stress test */
 //void EUTelGeometryTelescopeGeoDescription::findRad(Double_t x, Double_t y, Double_t z,
 //        Double_t theta, Double_t phi, Int_t &nbound, Float_t &length, Float_t &safe, Float_t &rad, Bool_t verbose) {

@@ -1,4 +1,4 @@
-#include "EUTelProcessorTrackingExhaustiveTrackSearch.h"
+#include "EUTelProcessorTrackingHelixTrackSearch.h"
 
 // C++
 #include <map>
@@ -30,7 +30,7 @@
 #include "EUTelRunHeaderImpl.h"
 #include "EUTelEventImpl.h"
 #include "EUTelUtility.h"
-#include "EUTelExhaustiveTrackFinder.h"
+#include "EUTelMagneticFieldFinder.h"
 #include "EUTelGeometryTelescopeGeoDescription.h"
 // Cluster types
 #include "EUTelSparseCluster2Impl.h"
@@ -44,7 +44,7 @@ using namespace lcio;
 using namespace marlin;
 using namespace eutelescope;
 
-/**  EUTelProcessorTrackingExhaustiveTrackSearch
+/**  EUTelProcessorTrackingHelixTrackSearch
  * 
  *  If compiled with MARLIN_USE_AIDA 
  *  it creates histograms.
@@ -60,33 +60,32 @@ using namespace eutelescope;
 
 // definition of static members mainly used to name histograms
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
-std::string EUTelProcessorTrackingExhaustiveTrackSearch::_histName::_numberTracksCandidatesHistName = "NumberTracksCandidates";
-std::string EUTelProcessorTrackingExhaustiveTrackSearch::_histName::_numberOfHitOnTrackCandidateHistName = "NumberOfHitsOnTrackCandidate";
+std::string EUTelProcessorTrackingHelixTrackSearch::_histName::_numberTracksCandidatesHistName = "NumberTracksCandidates";
+std::string EUTelProcessorTrackingHelixTrackSearch::_histName::_numberOfHitOnTrackCandidateHistName = "NumberOfHitsOnTrackCandidate";
 #endif // defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
 
 /** Default constructor */
-EUTelProcessorTrackingExhaustiveTrackSearch::EUTelProcessorTrackingExhaustiveTrackSearch() :
-Processor("EUTelProcessorTrackingExhaustiveTrackSearch"),
+EUTelProcessorTrackingHelixTrackSearch::EUTelProcessorTrackingHelixTrackSearch() :
+Processor("EUTelProcessorTrackingHelixTrackSearch"),
 _hitInputCollectionName("HitCollection"),
 _trackCandidateHitsOutputCollectionName("TrackCandidatesCollection"),
 _hotPixelCollectionName("hotpixel"),
 _hotPixelMap(),
-_trackFinder(0),
+_trackFitter(0),
+_tgeoFileName("TELESCOPE.root"),
 _maxMissingHitsPerTrackCand(0),
 _maxNTracks(10),
-_finderMode(2),
-_residualsXMin(6, -0.25),
-_residualsYMin(6, -0.25),
-_residualsXMax(6, 0.25),
-_residualsYMax(6, 0.25),
-_residualsRMax(6, 0.25),
+_eBeam(-1.),
+_qBeam(-1.),
+_eBeamUncertatinty(0.),
+_beamSpread(2,-1.),
 _histoInfoFileName("histoinfo.xml"),
 _nProcessedRuns(0),
 _nProcessedEvents(0),
 _aidaHistoMap1D() {
 
     // Processor description
-    _description = "EUTelProcessorTrackingExhaustiveTrackSearch preforms track pattern recognition.";
+    _description = "EUTelProcessorTrackingHelixTrackSearch preforms track pattern recognition.";
 
     // TrackerHit input collection
     registerInputCollection(LCIO::TRACKERHIT,
@@ -105,47 +104,27 @@ _aidaHistoMap1D() {
 
     // Optional processor parameters that define track finder settings
 
+    // Geometry definition
+    
+    registerOptionalParameter("GeometryFilename", "Name of the TGeo geometry definition file", _tgeoFileName, std::string("TELESCOPE.root"));
+    
+    // Fitter settings
+    
     registerOptionalParameter("MaxMissingHitsPerTrack", "Maximal number of missing hits on a track candidate",
             _maxMissingHitsPerTrackCand, static_cast<int> (0)); // Search full-length tracks by default
 
     registerOptionalParameter("MaxNTracksPerEvent", "Maximal number of track candidates to be found in events",
             _maxNTracks, static_cast<int> (100));
-
-    registerOptionalParameter("FinderMode", "Finder mode. Possible values are 1 (rectangular search window), 2 (circular search window)",
-            _finderMode, static_cast<int> (3));
-
-    const double defWindowSize = 0.25;
     
-    const FloatVec MinimalResidualsX(6, -defWindowSize); // assumes there are at most 10 planes. But this doesn't matter.
-    registerOptionalParameter("ResidualsXMin",
-            "Minimal values of the hit residuals in the X direction for a track. "
-            "Note: these numbers are ordered according to the z position of "
-            "the sensors and NOT according to the sensor id. Units are mm.",
-            _residualsXMin, MinimalResidualsX);
+    registerOptionalParameter("BeamEnergy", "Beam energy [GeV]", _eBeam, static_cast<double> (4.0));
 
-    const FloatVec MinimalResidualsY(6, -defWindowSize); // assumes there are at most 10 planes. But this doesn't matter.
-    registerOptionalParameter("ResidualsYMin", "Minimal values of the hit residuals in the Y direction for a track. "
-            "Note: these numbers are ordered according to the z position of "
-            "the sensors and NOT according to the sensor id. Units are mm.",
-            _residualsYMin, MinimalResidualsY);
-
-    const FloatVec MaximalResidualsX(6, defWindowSize); // assumes there are at most 10 planes. But this doesn't matter.
-    registerOptionalParameter("ResidualsXMax", "Maximal values of the hit residuals in the X direction for a track. "
-            "Note: these numbers are ordered according to the z position of "
-            "the sensors and NOT according to the sensor id. Units are mm.",
-            _residualsXMax, MaximalResidualsX);
-
-    const FloatVec MaximalResidualsY(6, defWindowSize); // assumes there are at most 10 planes. But this doesn't matter.
-    registerOptionalParameter("ResidualsYMax", "Maximal values of the hit residuals in the Y direction for a track. "
-            "Note: these numbers are ordered according to the z position of "
-            "the sensors and NOT according to the sensor id. Units are mm.",
-            _residualsYMax, MaximalResidualsY);
-
-    const FloatVec MaximalResidualsR(6, defWindowSize);
-    registerOptionalParameter("ResidualsRMax", "Maximal allowed distance between hits entering the recognition step "
-            "per 15 cm space between the planes. One value for each neighbor planes. "
-            "DistanceMax will be used for each pair if this vector is empty. Units are mm.",
-            _residualsRMax, MaximalResidualsR);
+    registerOptionalParameter("BeamCharge", "Beam charge [e]", _qBeam, static_cast<double> (-1));
+    
+    registerOptionalParameter("BeamSpread", "Angular spread of the beam (horizontal,vertical) [mrad] (for beam constraint). "
+                                            "No beam constraints if negative values are supplied.",
+                               _beamSpread, EVENT::FloatVec(2,0.) );
+    
+    registerOptionalParameter("BeamEnergyUncertainty", "Uncertainty of beam energy [%]", _eBeamUncertatinty, static_cast<double> (0.) );
 
     // Histogram information
 
@@ -159,9 +138,9 @@ _aidaHistoMap1D() {
 
 }
 
-void EUTelProcessorTrackingExhaustiveTrackSearch::init() {
+void EUTelProcessorTrackingHelixTrackSearch::init() {
 
-    streamlog_out(DEBUG) << "EUTelProcessorTrackingExhaustiveTrackSearch::init( )" << std::endl;
+    streamlog_out(DEBUG) << "EUTelProcessorTrackingHelixTrackSearch::init( )" << std::endl;
 
     // usually a good idea to
     printParameters();
@@ -170,55 +149,33 @@ void EUTelProcessorTrackingExhaustiveTrackSearch::init() {
     _nProcessedRuns = 0;
     _nProcessedEvents = 0;
 
-    // Check if the window size was properly initilised
-    {
-        const double defWindowSize = 1.;
-        if( _residualsRMax.size() < geo::gGeometry().nPlanes() ) {
-            streamlog_out( WARNING2 ) << "Size of residualsRMax is less than number of planes. Using defaults for the rest." << endl;
-            while( _residualsRMax.size() < geo::gGeometry().nPlanes() ) _residualsRMax.push_back( defWindowSize );
-        }
-        if( _residualsXMax.size() < geo::gGeometry().nPlanes() ) {
-            streamlog_out( WARNING2 ) << "Size of residualsXMax is less than number of planes. Using defaults for the rest." << endl;
-            while( _residualsXMax.size() < geo::gGeometry().nPlanes() ) _residualsXMax.push_back( defWindowSize );
-        }
-        if( _residualsXMin.size() < geo::gGeometry().nPlanes() ) {
-            streamlog_out( WARNING2 ) << "Size of residualsXMin is less than number of planes. Using defaults for the rest." << endl;
-            while( _residualsXMin.size() < geo::gGeometry().nPlanes() ) _residualsXMin.push_back( -defWindowSize );
-        }
-        if( _residualsYMax.size() < geo::gGeometry().nPlanes() ) {
-            streamlog_out( WARNING2 ) << "Size of residualsYMax is less than number of planes. Using defaults for the rest." << endl;
-            while( _residualsYMax.size() < geo::gGeometry().nPlanes() ) _residualsYMax.push_back( defWindowSize );
-        }
-        if( _residualsYMin.size() < geo::gGeometry().nPlanes() ) {
-            streamlog_out( WARNING2 ) << "Size of residualsYMin is less than number of planes. Using defaults for the rest." << endl;
-            while( _residualsYMin.size() < geo::gGeometry().nPlanes() ) _residualsYMin.push_back( -defWindowSize );
-        }
-    }
-
+    // Getting access to geometry description
+    geo::gGeometry().initializeTGeoDescription(_tgeoFileName);
+    
     // Instantiate track finder. This is a working horse of the processor.
     {
         streamlog_out(DEBUG) << "Initialisation of track finder" << std::endl;
 
-        EUTelExhaustiveTrackFinder* Finder = new EUTelExhaustiveTrackFinder("TrackFinder", getAllowedMissingHits(), getMaxTrackCandidates());
+        EUTelKalmanFilter* Finder = new EUTelKalmanFilter("KalmanTrackFinder");
         if (!Finder) {
             streamlog_out(ERROR) << "Can't allocate an instance of EUTelExhaustiveTrackFinder. Stopping ..." << std::endl;
             throw UnknownDataTypeException("Track finder was not created");
         }
-        Finder->SetMode(getFinderMode());
-        Finder->SetDistanceMaxVec(_residualsRMax);
-        Finder->SetResidualsYMax(_residualsYMax);
-        Finder->SetResidualsYMin(_residualsYMin);
-        Finder->SetResidualsXMax(_residualsXMax);
-        Finder->SetResidualsXMin(_residualsXMin);
 
-        _trackFinder = Finder;
+        Finder->setAllowedMissingHits( _maxMissingHitsPerTrackCand );
+        Finder->setBeamMomentum( _eBeam );
+        Finder->setBeamCharge( _qBeam );
+        Finder->setBeamMomentumUncertainty( _eBeamUncertatinty );
+        Finder->setBeamSpread( _beamSpread );
+        
+        _trackFitter = Finder;
     }
 
     // Book histograms
     bookHistograms();
 }
 
-void EUTelProcessorTrackingExhaustiveTrackSearch::processRunHeader(LCRunHeader* run) {
+void EUTelProcessorTrackingHelixTrackSearch::processRunHeader(LCRunHeader* run) {
 
     auto_ptr<EUTelRunHeaderImpl> header(new EUTelRunHeaderImpl(run));
     header->addProcessor(type());
@@ -243,7 +200,7 @@ void EUTelProcessorTrackingExhaustiveTrackSearch::processRunHeader(LCRunHeader* 
     _nProcessedRuns++;
 }
 
-void EUTelProcessorTrackingExhaustiveTrackSearch::processEvent(LCEvent * evt) {
+void EUTelProcessorTrackingHelixTrackSearch::processEvent(LCEvent * evt) {
 
     if (isFirstEvent()) {
         // Fill hot pixel map   
@@ -255,11 +212,11 @@ void EUTelProcessorTrackingExhaustiveTrackSearch::processEvent(LCEvent * evt) {
     // Do not process last or unknown events
     
     if (event->getEventType() == kEORE) {
-        streamlog_out(DEBUG4) << "EORE found: nothing else to do." << endl;
+        streamlog_out(DEBUG4) << "EORE found: nothing else to do." << std::endl;
         return;
     } else if (event->getEventType() == kUNKNOWN) {
         streamlog_out(WARNING2) << "Event number " << event->getEventNumber() << " in run " << event->getRunNumber()
-                << " is of unknown type. Continue considering it as a normal Data Event." << endl;
+                << " is of unknown type. Continue considering it as a normal Data Event." << std::endl;
     }
 
     // Try to access collection
@@ -274,42 +231,55 @@ void EUTelProcessorTrackingExhaustiveTrackSearch::processEvent(LCEvent * evt) {
 
     // this will only be entered if the collection is available
     if (col != NULL) {
-        streamlog_out(DEBUG2) << "EUTelProcessorTrackingExhaustiveTrackSearch::processEvent()" << endl;
+        streamlog_out(DEBUG2) << "EUTelProcessorTrackingHelixTrackSearch::processEvent()" << std::endl;
 
         // Prepare hits for track finder
-        map< int, EVENT::TrackerHitVec > allHitsArray;
-        vector< EVENT::TrackerHitVec > allHitsVec;
-        const int nEmptyPlanes = FillHits(evt, col, allHitsArray, allHitsVec);
+        EVENT::TrackerHitVec allHitsVec;
+        FillHits(evt, col, allHitsVec);
 
         // Search tracks
         streamlog_out(DEBUG1) << "Event #" << _nProcessedEvents << std::endl;
         streamlog_out(DEBUG1) << "Initialising hits for _theFinder..." << std::endl;
         
-        _trackFinder->SetAllHits(allHitsVec);
-        static_cast<EUTelExhaustiveTrackFinder*>(_trackFinder)->SetNEmptyPlanes(nEmptyPlanes);
+        static_cast<EUTelKalmanFilter*>(_trackFitter)->setHits(allHitsVec);
+        static_cast<EUTelKalmanFilter*>(_trackFitter)->initialise();
         streamlog_out(DEBUG1) << "Trying to find tracks..." << endl;
-        EUTelTrackFinder::SearchResult searchResult = _trackFinder->SearchTracks();
-        streamlog_out(DEBUG1) << "Search results = " << static_cast<int>(searchResult) << endl;
+        _trackFitter->FitTracks();
         streamlog_out(DEBUG1) << "Retrieving track candidates..." << endl;
-        vector< EVENT::TrackerHitVec > trackCandidates = _trackFinder->GetTrackCandidates();
+        vector< EUTelTrackImpl* >& trackCandidates = static_cast<EUTelKalmanFilter*>(_trackFitter)->getTracks();
        
         const int nTracks = trackCandidates.size();
         static_cast<AIDA::IHistogram1D*> (_aidaHistoMap1D[ _histName::_numberTracksCandidatesHistName ]) -> fill(nTracks);
         streamlog_out(DEBUG1) << "Event #" << _nProcessedEvents << endl;
-        streamlog_out(DEBUG1) << "Track finder " << _trackFinder->GetName() << " found  " << nTracks << endl;
+        streamlog_out(DEBUG1) << "Track finder " << _trackFitter->GetName() << " found  " << nTracks << endl;
         
         int nHitsOnTrack = 0;
-        vector< EVENT::TrackerHitVec >::const_iterator itrk = trackCandidates.begin();
-        for ( ; itrk != trackCandidates.end(); ++itrk ) {
-            nHitsOnTrack = itrk->size();
+        vector< EUTelTrackImpl* >::const_iterator itrk;
+        for ( itrk = trackCandidates.begin() ; itrk != trackCandidates.end(); ++itrk ) {
+            const EVENT::TrackerHitVec& trkHits = (*itrk)->getTrackerHits();
+            nHitsOnTrack = trkHits.size();
+            EVENT::TrackerHitVec::const_iterator itTrkHits;
+            streamlog_out(MESSAGE0) << "Track hits start:==============" << std::endl;
+            for ( itTrkHits = trkHits.begin() ; itTrkHits != trkHits.end(); ++itTrkHits ) {
+                const double* uvpos = (*itTrkHits)->getPosition();
+                streamlog_out(MESSAGE0) << "Hit (id=" << (*itrk)->id() << ") local(u,v) coordinates: (" << uvpos[0] << "," << uvpos[1] << ")" << std::endl;
+            }
+            streamlog_out(MESSAGE0) << "Track hits end:==============" << std::endl;
             static_cast<AIDA::IHistogram1D*> (_aidaHistoMap1D[ _histName::_numberOfHitOnTrackCandidateHistName ]) -> fill(nHitsOnTrack);
         }
-
+        
+//        std::vector< EVENT::TrackerHitVec >& trkHits = static_cast<EUTelKalmanFilter*>(_trackFitter)->getTrackCandidates();
+//        int nHitsOnTrack = 0;
+//        std::vector< EVENT::TrackerHitVec >::const_iterator itrk;
+//        for ( itrk = trkHits.begin() ; itrk != trkHits.end(); ++itrk ) {
+//            nHitsOnTrack = (*itrk).size();
+//            static_cast<AIDA::IHistogram1D*> (_aidaHistoMap1D[ _histName::_numberOfHitOnTrackCandidateHistName ]) -> fill(nHitsOnTrack);
+//        }
         
         // Write output collection
-        addTrackCandidateToCollection(evt, trackCandidates);
+//        addTrackCandidateToCollection(evt, trackCandidates);
 
-        _trackFinder->Reset();
+//        _trackFitter->Reset();
 
         _nProcessedEvents++;
 
@@ -318,21 +288,20 @@ void EUTelProcessorTrackingExhaustiveTrackSearch::processEvent(LCEvent * evt) {
 }
 
 /** 
- * Fill hits in a map sorted by the number of plane along Z axis.
+ * Fill hits in a vector.
  * 
  * @TODO LCEvent* evt must be removed from the list of arguments, idealy.
  * 
  * @param evt event pointer
  * @param collection hits collection pointer
- * @param [out] allHitsArray vector of hits sorted by number along Z axis
- * @return number of planes with missing hits
+ * @param [out] allHitsVec vector of hits in event
  */
-int EUTelProcessorTrackingExhaustiveTrackSearch::FillHits(LCEvent * evt,
+void EUTelProcessorTrackingHelixTrackSearch::FillHits(LCEvent * evt,
         LCCollection* collection,
-        map< int, EVENT::TrackerHitVec >& allHitsArray,
-        vector< EVENT::TrackerHitVec >& allHitsVec) const {
+        EVENT::TrackerHitVec& allHitsVec) const {
 
-    allHitsVec.resize( geo::gGeometry().nPlanes() );
+    allHitsVec.clear();
+    allHitsVec.resize( 0 );
     
     // loop over all hits in collection
     for (int iHit = 0; iHit < collection->getNumberOfElements(); iHit++) {
@@ -370,33 +339,12 @@ int EUTelProcessorTrackingExhaustiveTrackSearch::FillHits(LCEvent * evt,
             }
         }
 
-        if (hit->getType() == kEUTelAPIXClusterImpl) {
-            TrackerDataImpl * clusterFrame = static_cast<TrackerDataImpl*> (clusterVector[0]);
-            EUTelSparseClusterImpl< EUTelAPIXSparsePixel > *apixCluster = new EUTelSparseClusterImpl< EUTelAPIXSparsePixel > (clusterFrame);
-            int sensorID = apixCluster->getDetectorID();
-            bool skipHit = false;
-        }
-
         const int localSensorID = Utility::GuessSensorID( hit );  // localSensorID == -1, if detector ID was not found
-        const int numberAlongZ = geo::gGeometry().sensorIDtoZOrder( localSensorID );
-        if ( localSensorID >= 0 ) allHitsArray[ numberAlongZ ].push_back( hit );
-        if ( localSensorID >= 0 ) allHitsVec[ numberAlongZ ].push_back( hit );
+        if ( localSensorID >= 0 ) allHitsVec.push_back( hit );
         
         delete cluster; // <--- destroying the cluster
     } // end loop over all hits in collection
     
-    
-    // remove planes with no hits
-    int nEmptyPlanes = 0;
-    for ( vector<EVENT::TrackerHitVec>::iterator it=allHitsVec.begin(); it!=allHitsVec.end(); ) {
-        if( it->empty() ) { 
-            nEmptyPlanes++;
-            it = allHitsVec.erase(it); 
-        }
-        else ++it;
-    }
-    
-    return nEmptyPlanes;
 }
 
 /**
@@ -405,7 +353,7 @@ int EUTelProcessorTrackingExhaustiveTrackSearch::FillHits(LCEvent * evt,
  * @param evt event pointer
  * @param trackCandidates  vectors of hits assigned to track candidates
  */
-void EUTelProcessorTrackingExhaustiveTrackSearch::addTrackCandidateToCollection(LCEvent* evt, const vector< EVENT::TrackerHitVec >& trackCandidates) {
+void EUTelProcessorTrackingHelixTrackSearch::addTrackCandidateToCollection(LCEvent* evt, const vector< EVENT::TrackerHitVec >& trackCandidates) {
     // Prepare output collection
     LCCollectionVec * trkCandCollection = 0;
     try {
@@ -443,21 +391,21 @@ void EUTelProcessorTrackingExhaustiveTrackSearch::addTrackCandidateToCollection(
 
 }
 
-void EUTelProcessorTrackingExhaustiveTrackSearch::check(LCEvent * evt) {
+void EUTelProcessorTrackingHelixTrackSearch::check(LCEvent * evt) {
     // nothing to check here
 }
 
-void EUTelProcessorTrackingExhaustiveTrackSearch::end() {
+void EUTelProcessorTrackingHelixTrackSearch::end() {
 
-    delete _trackFinder;
+    delete _trackFitter;
     
-    streamlog_out(MESSAGE) << "EUTelProcessorTrackingExhaustiveTrackSearch::end()  " << name()
+    streamlog_out(MESSAGE) << "EUTelProcessorTrackingHelixTrackSearch::end()  " << name()
             << " processed " << _nProcessedEvents << " events in " << _nProcessedRuns << " runs "
             << std::endl;
 
 }
 
-void EUTelProcessorTrackingExhaustiveTrackSearch::bookHistograms() {
+void EUTelProcessorTrackingHelixTrackSearch::bookHistograms() {
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
 
     try {
@@ -529,14 +477,10 @@ void EUTelProcessorTrackingExhaustiveTrackSearch::bookHistograms() {
 #endif // defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
 }
 
-int EUTelProcessorTrackingExhaustiveTrackSearch::getMaxTrackCandidates() const {
+int EUTelProcessorTrackingHelixTrackSearch::getMaxTrackCandidates() const {
     return _maxNTracks;
 }
 
-int EUTelProcessorTrackingExhaustiveTrackSearch::getAllowedMissingHits() const {
+int EUTelProcessorTrackingHelixTrackSearch::getAllowedMissingHits() const {
     return _maxMissingHitsPerTrackCand;
-}
-
-int EUTelProcessorTrackingExhaustiveTrackSearch::getFinderMode() const {
-    return _finderMode;
 }

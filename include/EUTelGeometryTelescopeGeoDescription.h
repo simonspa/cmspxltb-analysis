@@ -20,6 +20,7 @@
 #include "gear/GearMgr.h"
 #include "gear/SiPlanesLayerLayout.h"
 #include "gear/SiPlanesParameters.h"
+#include "gear/BField.h"
 
 // EUTELESCOPE
 #include "EUTelUtility.h"
@@ -27,6 +28,8 @@
 //#ifdef USE_TGEO
 // ROOT
 #include "TGeoManager.h"
+#include "TGeoMatrix.h"
+#include "TVector3.h"
 
 //#endif //USE_TGEO
 
@@ -58,26 +61,48 @@ namespace eutelescope {
              */
             static EUTelGeometryTelescopeGeoDescription& getInstance();
             
+            /** Number of planes in the setup */
             size_t nPlanes() const;
             
+            /** Z coordinates of centers of planes */
             EVENT::DoubleVec siPlanesZPositions() const;
             
+            /** X coordinate of center of sensor 
+             * with given ID in global coordinate frame */
             double siPlaneXPosition( int );
             
+            /** Y coordinate of center of sensor 
+             * with given ID in global coordinate frame */
             double siPlaneYPosition( int );
             
+            /** Z coordinate of center of sensor 
+             * with given ID in global coordinate frame */
             double siPlaneZPosition( int );
             
-            std::map<double, int> getSensorIDMap() const;
+            /** Rotation around X axis of the global coordinate frame */
+            double siPlaneXRotation( int );
             
+            /** Rotation around Y axis of global coordinate frame */
+            double siPlaneYRotation( int );
+            
+            /** Rotation around Z axis of global coordinate frame */
+            double siPlaneZRotation( int );
+            
+            /** Plane normal vector (nx,ny,nz) */
+            TVector3 siPlaneNormal( int );
+            
+            
+            /** Map from sensor ID to number along Z */
+            std::map<int, int> sensorZOrdertoIDs() const;
+            
+            /** Map from sensor ID to number along Z */
             std::map<int, int> sensorIDstoZOrder() const;
             
-            int sensorIDtoZOrder( int );
+            int sensorIDtoZOrder( int ) const;
             
-            EVENT::IntVec sensorIDsVecZOrder() const;
+            int sensorZOrderToID( int ) const;
             
-            std::map<int, int> sensorIDsVecMap() const;
-            
+            /** Vector of all sensor IDs */
             EVENT::IntVec sensorIDsVec() const;
 
         public:
@@ -99,6 +124,17 @@ namespace eutelescope {
         public:
             void findRad(Double_t x, Double_t y, Double_t z,
                     Double_t theta, Double_t phi, Int_t &nbound, Float_t &length, Float_t &safe, Float_t &rad, Bool_t verbose);
+            
+            int getSensorID( const float globalPos[] ) const;
+            
+            void local2Master( int, const double[], double[] );
+            
+            void master2Local( const double[], double[] );
+            
+            const TGeoHMatrix* getHMatrix( const double globalPos[] );
+            
+            /** Magnetic field */
+            const gear::BField& getMagneticFiled() const;
 
         public:
             /** Silicon planes parameters as described in GEAR
@@ -125,40 +161,35 @@ namespace eutelescope {
 
 
         private:
-            //    /** Ordered sensor ID
-            //     *  This vector contains sensorID sorted according to their 
-            //     *  position along the Z axis (beam axis)
-            //     */
-            //    EVENT::IntVec _orderedSensorID;
-            //
-            //    /** @TODO: Add description to this variable */
-            //    EVENT::IntVec _orderedSensorID_wo_excluded;
-
             /** Vector of Sensor IDs */
             EVENT::IntVec _sensorIDVec;
 
             /** Sensor ID map (inverse sensorIDVec) */
             std::map< int, int > _sensorIDVecMap;
 
-            /** Sensor ID vector ordered according to their 
-             *  position along the Z axis (beam axis) */
-            EVENT::IntVec _sensorIDVecZOrder;
+            /** Map from number along the Z axis (beam axis) to sensor ID */
+            std::map<int, int> _sensorZOrderToIDMap;
 
             /** Map from sensor ID to number along Z */
             std::map<int, int> _sensorIDtoZOrderMap;
 
-            // an associative map for getting also the sensorID ordered
-            /** @TODO: Add description to this variable */
-            std::map< double, int > _sensorIDMap;
-
-            /** @TODO: Add description to this variable */
+            /** X coordinate of the sensors centers in global coordinate frame [mm]*/
             EVENT::DoubleVec _siPlaneXPosition;
             
-            /** @TODO: Add description to this variable */
+            /** Y coordinate of the sensors centers in global coordinate frame [mm]*/
             EVENT::DoubleVec _siPlaneYPosition;
             
-            /** @TODO: Add description to this variable */
+            /** Z coordinate of the sensors centers in global coordinate frame [mm]*/
             EVENT::DoubleVec _siPlaneZPosition;
+            
+            /** Rotation around X axis of the global coordinate frame [rad]*/
+            EVENT::DoubleVec _siPlaneXRotation;
+            
+            /** Rotation around Y axis of global coordinate frame [rad]*/
+            EVENT::DoubleVec _siPlaneYRotation;
+            
+            /** Rotation around Z axis of global coordinate frame [rad]*/
+            EVENT::DoubleVec _siPlaneZRotation;
 
             /** Number of planes including DUT */
             size_t _nPlanes;
