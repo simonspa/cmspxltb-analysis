@@ -1,4 +1,4 @@
-// Version: $Id: EUTelTestFitter.h 2737 2013-06-18 15:59:43Z hperrey $
+// Version: $Id: EUTelTestFitter.h 2889 2013-08-02 11:21:27Z hperrey $
 
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -516,7 +516,7 @@ namespace eutelescope {
     /*!
      */
     std::string      _referenceHitCollectionName;
-    bool             _applyToReferenceHitCollection;
+    bool             _useReferenceHitCollection;
     LCCollectionVec* _referenceHitVec;    
  
 

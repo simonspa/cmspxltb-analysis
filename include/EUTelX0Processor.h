@@ -1,4 +1,4 @@
-// Version: $Id: EUTelX0Processor.h 2662 2013-06-02 14:31:25Z hamnett $
+// Version: $Id: EUTelX0Processor.h 2894 2013-08-05 08:58:26Z hamnett $
 // Contact: Phillip Hamnett (phillip.hamnett@desy.de)
 /*
  * This source code is part of the Eutelescope package of Marlin.
@@ -189,8 +189,11 @@ private:
   void printHitParameters(EVENT::TrackerHit *hit);
   void singlePointResolution(EVENT::Track *track);
   void threePointResolution(EVENT::Track *track);
+  std::pair< std::vector< double >, std::vector< double > > GetTrackAngles(std::vector< TVector3* > hits);
   void kinkEstimate(EVENT::Track *track);
   void kinkGaussian();
+  std::pair< double, double > ConversionX0mapToHitmap(int x, int y);
+  std::pair< int, int > ConversionHitmapToX0map(double x, double y);
 
   //Private member values
   std::string _trackColName;
@@ -241,11 +244,13 @@ private:
   double minbinalpha;
   double maxbinalpha;
   int binsx;
-  int minbinsx;//(mm)
-  int maxbinsx;
+  double minx;//(mm)
+  double maxx;
   int binsy;
-  int minbinsy;
-  int maxbinsy;
+  double miny;
+  double maxy;
+  double binsizex;
+  double binsizey;
   TDirectory *X0ProcessorDirectory;
   TH1D *SinglePointResidualXPlane0;
   TH1D *SinglePointResidualXPlane1;
@@ -277,6 +282,11 @@ private:
   TH1D *AngleYForwardPlane2;
   TH1D *AngleYForwardPlane3;
   TH1D *AngleYForwardPlane4;
+  TH2D *AngleXYForwardPlane0;
+  TH2D *AngleXYForwardPlane1;
+  TH2D *AngleXYForwardPlane2;
+  TH2D *AngleXYForwardPlane3;
+  TH2D *AngleXYForwardPlane4;
   TH1D *ScatteringAngleXPlane1;
   TH1D *ScatteringAngleXPlane2;
   TH1D *ScatteringAngleXPlane3;

@@ -1,4 +1,4 @@
-// Version: $Id: EUTelDafBase.h 2310 2013-01-23 10:26:47Z rubinsky $
+// Version: $Id: EUTelDafBase.h 2889 2013-08-02 11:21:27Z hperrey $
 //! Author Havard Gjersdal <haavagj@fys.uio.no>
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -152,7 +152,7 @@ namespace eutelescope {
     /*!
      */
     std::string      _referenceHitCollectionName;
-    bool             _applyToReferenceHitCollection;
+    bool             _useReferenceHitCollection;
     LCCollectionVec* _referenceHitVec;    
  
 

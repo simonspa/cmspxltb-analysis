@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelAPIXHotPixelKiller.cc 2475 2013-03-17 17:40:48Z hamnett $
+// Version $Id: EUTelAPIXHotPixelKiller.cc 2884 2013-08-02 08:20:17Z hperrey $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -369,17 +369,6 @@ void EUTelAPIXHotPixelKiller::processEvent (LCEvent * event)
     {
         streamlog_out ( WARNING2 ) << "Event number " << event->getEventNumber()
             << " is of unknown type. Continue considering it as a normal Data Event." << endl;
-    }
-
-    try 		
-    { 
-      int numberofelements;		
-      LCCollectionVec * statusCollectionVec = dynamic_cast< LCCollectionVec * > ( event->getCollection( _statusCollectionName ) ); 
-      numberofelements = statusCollectionVec->getNumberOfElements();
-    } 		
-    catch(...) 		
-    { 		
-      std::cout << "Input collection " << _statusCollectionName.c_str() << " not found in the current event. Skipping..." << std::endl; 		
     }
 
     try 

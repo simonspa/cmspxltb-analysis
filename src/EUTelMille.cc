@@ -1,6 +1,6 @@
 // Contact: Igor Rubinskiy, DESY <mailto:igorrubinsky@gmail.com>
 //
-// Version: $Id: EUTelMille.cc 2870 2013-07-29 14:32:36Z spanns $
+// Version: $Id: EUTelMille.cc 2895 2013-08-06 15:30:37Z hperrey $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -100,11 +100,6 @@ unsigned int number_of_datapoints;
 void fcn_wrapper(int& /*npar*/, double* /*gin*/, double &f, double *par, int /*iflag*/)
 {
   EUTelMille::trackfitter fobj(hitsarray,number_of_datapoints);
-  double p[4];
-  p[0] = 0.0;
-  p[1] = 0.0;
-  p[2] = 0.0;
-  p[3] = 0.0;
   f = fobj.fit(par);
 }
 
@@ -271,8 +266,7 @@ EUTelMille::EUTelMille () : Processor("EUTelMille") {
 
   registerOptionalParameter("ReferenceCollection","reference hit collection name ", _referenceHitCollectionName, static_cast <string> ("referenceHit") );
  
-  registerOptionalParameter("ApplyToReferenceCollection","Do you want the reference hit collection to be corrected by the shifts and tilts from the alignment collection?",  _applyToReferenceHitCollection, static_cast< bool   > ( false ));
- 
+  registerOptionalParameter("UseReferenceCollection","Do you want the reference hit collection to be used for coordinate transformations?",  _useReferenceHitCollection, static_cast< bool   > ( true ));
 
   registerOptionalParameter("FixParameter","Fixes the given alignment parameters in the fit if alignMode==3 is used. For each sensor an integer must be specified (If no value is given, then all parameters will be free). bit 0 = x shift, bit 1 = y shift, bit 2 = z shift, bit 3 = alpha, bit 4 = beta, bit 5 = gamma. Note: these numbers are ordered according to the z position of the sensors and NOT according to the sensor id.",_FixParameter, IntVec (static_cast <int> (6), 24));
 
@@ -790,7 +784,7 @@ void EUTelMille::findtracks2(
             {
               double residualX  = -999999.;
               double residualY  = -999999.;
-              double residualZ  = -999999.;
+              //double residualZ  = -999999.;
 
               // now loop through all hits on a track candidate "vec"
               // start at the end, stop on the first non-zero hit
@@ -800,10 +794,10 @@ void EUTelMille::findtracks2(
                 {
                   double x = _allHitsArray[ivec][vec[ivec]].measuredX;
                   double y = _allHitsArray[ivec][vec[ivec]].measuredY;
-                  double z = _allHitsArray[ivec][vec[ivec]].measuredZ;
+                  //double z = _allHitsArray[ivec][vec[ivec]].measuredZ;
                   residualX  = abs(x - _allHitsArray[e+1][vec[e+1]].measuredX);
                   residualY  = abs(y - _allHitsArray[e+1][vec[e+1]].measuredY);
-                  residualZ  = abs(z - _allHitsArray[e+1][vec[e+1]].measuredZ);
+                  //residualZ  = abs(z - _allHitsArray[e+1][vec[e+1]].measuredZ);
                   break; 
                 }   
               }
@@ -1160,7 +1154,7 @@ void EUTelMille::processEvent (LCEvent * event) {
   {
     FillHotPixelMap(event);
 
-    if ( _applyToReferenceHitCollection ) 
+    if ( _useReferenceHitCollection ) 
     {
        _referenceHitVec = dynamic_cast < LCCollectionVec * > (event->getCollection( _referenceHitCollectionName));
     }
@@ -1359,9 +1353,9 @@ void EUTelMille::processEvent (LCEvent * event) {
 
             // Getting positions of the hits.
             // ------------------------------
-            hitsInPlane.measuredX = 1000 * hit->getPosition()[0];
-            hitsInPlane.measuredY = 1000 * hit->getPosition()[1];
-            hitsInPlane.measuredZ = 1000 * hit->getPosition()[2];
+            hitsInPlane.measuredX = 1000. * hit->getPosition()[0];
+            hitsInPlane.measuredY = 1000. * hit->getPosition()[1];
+            hitsInPlane.measuredZ = 1000. * hit->getPosition()[2];
 
             _allHitsArray[layerIndex].push_back(hitsInPlane);
             delete cluster; // <--- destroying the cluster
@@ -1629,9 +1623,9 @@ void EUTelMille::processEvent (LCEvent * event) {
 
                   hitsplane.push_back(
                           EUTelMille::HitsInPlane(
-                              1000 * hit->getPosition()[0],
-                              1000 * hit->getPosition()[1],
-                              1000 * hit->getPosition()[2]
+                              1000. * hit->getPosition()[0],
+                              1000. * hit->getPosition()[1],
+                              1000. * hit->getPosition()[2]
                               )
                           );
  
@@ -1658,9 +1652,9 @@ void EUTelMille::processEvent (LCEvent * event) {
                             {
                               hitsplane.push_back(
                                       EUTelMille::HitsInPlane(
-                                          PositionsHere[0] * 1000,
-                                          PositionsHere[1] * 1000,
-                                          PositionsHere[2] * 1000
+                                          PositionsHere[0] * 1000.,
+                                          PositionsHere[1] * 1000.,
+                                          PositionsHere[2] * 1000.
                                           )
                                       );
                             } // end assume fitted hits have type 32
@@ -1707,8 +1701,6 @@ void EUTelMille::processEvent (LCEvent * event) {
   if (_nTracks == 1 || _onlySingleTrackEvents == 0) {
 
     DoubleVec lambda;
-    double par_c0 = 0.0;
-    double par_c1 = 0.0;
     lambda.reserve(_nPlanes);
     bool validminuittrack = false;
 
@@ -1766,7 +1758,7 @@ void EUTelMille::processEvent (LCEvent * event) {
           int index_firsthit=0;
           double x0 = -1.;
           double y0 = -1.;
-          double z0 = -1.;
+          //double z0 = -1.;
           for (unsigned int help = 0; help < _nPlanes; help++) 
           {
             bool excluded = false;
@@ -1789,7 +1781,7 @@ void EUTelMille::processEvent (LCEvent * event) {
               index_firsthit = help; 
               x0 = _xPos[track][help];
               y0 = _yPos[track][help];
-              z0 = _zPos[track][help];
+              //z0 = _zPos[track][help];
             }
             const double xresid = x0 - x;
             const double yresid = y0 - y;
@@ -1950,8 +1942,6 @@ void EUTelMille::processEvent (LCEvent * event) {
               c1 = -1.0*TMath::Cos(psi) * TMath::Sin(delta);
               c2 = TMath::Cos(delta) * TMath::Cos(psi);
 	      //cout << " b0: " << b0 << ", b1: " << b1 << ", c2: " << c2 << endl;
-              par_c0 = c0;
-              par_c1 = c1;
               validminuittrack = true;
               
               for (unsigned int help =0; help < _nPlanes; help++)
@@ -2660,7 +2650,7 @@ int EUTelMille::guessSensorID( double * hit )
   int sensorID = -1;
   double minDistance =  numeric_limits< double >::max() ;
 
-  if( _referenceHitVec == 0 || _applyToReferenceHitCollection == false)
+  if( _referenceHitVec == 0 || _useReferenceHitCollection == false)
   {
     // use z information of planes instead of reference vector
     for ( int iPlane = 0 ; iPlane < _siPlanesLayerLayout->getNLayers(); ++iPlane ) {
@@ -2738,8 +2728,6 @@ bool EUTelMille::hitContainsHotPixels( TrackerHitImpl   * hit)
       try{
 	LCObjectVec clusterVector = hit->getRawHits();
 
-	EUTelVirtualCluster * cluster;
-
 	if ( hit->getType() == kEUTelSparseClusterImpl ) 
 	  {
       
@@ -2782,25 +2770,19 @@ bool EUTelMille::hitContainsHotPixels( TrackerHitImpl   * hit)
 	  // fixed cluster implementation. Remember it
 	  //  can come from
 	  //  both RAW and ZS data
-   
-	  cluster = new EUTelBrickedClusterImpl(static_cast<TrackerDataImpl *> ( clusterVector[0] ) );
-                
+                   
 	} else if ( hit->getType() == kEUTelDFFClusterImpl ) {
               
 	  // fixed cluster implementation. Remember it can come from
 	  // both RAW and ZS data
-	  cluster = new EUTelDFFClusterImpl( static_cast<TrackerDataImpl *> ( clusterVector[0] ) );
 	} else if ( hit->getType() == kEUTelFFClusterImpl ) {
               
 	  // fixed cluster implementation. Remember it can come from
 	  // both RAW and ZS data
-	  cluster = new EUTelFFClusterImpl( static_cast<TrackerDataImpl *> ( clusterVector[0] ) );
 	} 
 	else if ( hit->getType() == kEUTelAPIXClusterImpl ) 
 	  {
 	    TrackerDataImpl * clusterFrame = static_cast<TrackerDataImpl*> ( clusterVector[0] );
-
-	    cluster = new eutelescope::EUTelSparseClusterImpl< eutelescope::EUTelAPIXSparsePixel >(clusterFrame);
 	      
 	    eutelescope::EUTelSparseClusterImpl< eutelescope::EUTelAPIXSparsePixel > *apixCluster = new eutelescope::EUTelSparseClusterImpl< eutelescope::EUTelAPIXSparsePixel >(clusterFrame);
                 
@@ -2808,13 +2790,8 @@ bool EUTelMille::hitContainsHotPixels( TrackerHitImpl   * hit)
 
 	    for (unsigned int iPixel = 0; iPixel < apixCluster->size(); ++iPixel) 
 	      {
-		int pixelX, pixelY;
 		EUTelAPIXSparsePixel apixPixel;
 		apixCluster->getSparsePixelAt(iPixel, &apixPixel);
-		pixelX = apixPixel.getXCoord();
-		pixelY = apixPixel.getYCoord();
-		//                    cout << "(" << pixelX << "|" << pixelY << ") ";
-		//                    cout << endl;
 
 		  {                       
 		    char ix[100];
@@ -3306,7 +3283,6 @@ void EUTelMille::end() {
           vector<double > tokens;
           stringstream tokenizer;
           string line;
-          double buffer;
 
           // get the first line and throw it away since it is a
           // comment!
@@ -3325,8 +3301,6 @@ void EUTelMille::end() {
             else
               numpars = 6;
 
-            bool _nonzero_tokens = false;
-
             for ( unsigned int iParam = 0 ; iParam < numpars ; ++iParam ) 
             {
               getline( millepede, line );
@@ -3340,10 +3314,10 @@ void EUTelMille::end() {
               tokenizer.clear();
               tokenizer.str( line );
 
-              // check that all parts of the line are non zero
+	      double buffer;
+              // // check that all parts of the line are non zero
               while ( tokenizer >> buffer ) {
                 tokens.push_back( buffer ) ;
-                if(buffer> 1e-12) _nonzero_tokens = true;
               }
 
               if ( ( tokens.size() == 3 ) || ( tokens.size() == 6 ) || (tokens.size() == 5) ) {
@@ -3354,12 +3328,12 @@ void EUTelMille::end() {
               if(_alignMode != 3)
                 {
                  if ( iParam == 0 ) {
-                    constant->setXOffset( tokens[1] / 1000 );
-                    if ( ! isFixed ) constant->setXOffsetError( tokens[4] / 1000 ) ;
+                    constant->setXOffset( tokens[1] / 1000. );
+                    if ( ! isFixed ) constant->setXOffsetError( tokens[4] / 1000. ) ;
                   }
                   if ( iParam == 1 ) {
-                    constant->setYOffset( tokens[1] / 1000 ) ;
-                    if ( ! isFixed ) constant->setYOffsetError( tokens[4] / 1000 ) ;
+                    constant->setYOffset( tokens[1] / 1000. ) ;
+                    if ( ! isFixed ) constant->setYOffsetError( tokens[4] / 1000. ) ;
                   }
                   if ( iParam == 2 ) {
                     constant->setGamma( tokens[1]  ) ;
@@ -3369,16 +3343,16 @@ void EUTelMille::end() {
               else
                 {
                  if ( iParam == 0 ) {
-                    constant->setXOffset( tokens[1] / 1000 );
-                    if ( ! isFixed ) constant->setXOffsetError( tokens[4] / 1000 ) ;                    
+                    constant->setXOffset( tokens[1] / 1000. );
+                    if ( ! isFixed ) constant->setXOffsetError( tokens[4] / 1000. ) ;                    
                   }
                   if ( iParam == 1 ) {
-                    constant->setYOffset( tokens[1] / 1000 ) ;
-                    if ( ! isFixed ) constant->setYOffsetError( tokens[4] / 1000 ) ;
+                    constant->setYOffset( tokens[1] / 1000. ) ;
+                    if ( ! isFixed ) constant->setYOffsetError( tokens[4] / 1000. ) ;
                   }
                   if ( iParam == 2 ) {
-                    constant->setZOffset( tokens[1] / 1000 ) ;
-                    if ( ! isFixed ) constant->setZOffsetError( tokens[4] / 1000 ) ;
+                    constant->setZOffset( tokens[1] / 1000. ) ;
+                    if ( ! isFixed ) constant->setZOffsetError( tokens[4] / 1000. ) ;
                   }
                   if ( iParam == 3 ) {
                     constant->setAlpha( tokens[1]  ) ;

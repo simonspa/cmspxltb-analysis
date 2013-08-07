@@ -1,4 +1,4 @@
-// Version: $Id: EUTelMille.h 2743 2013-06-20 12:29:29Z hperrey $
+// Version: $Id: EUTelMille.h 2889 2013-08-02 11:21:27Z hperrey $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -369,7 +369,7 @@ namespace eutelescope {
     /*!
      */
     std::string      _referenceHitCollectionName;
-    bool             _applyToReferenceHitCollection;
+    bool             _useReferenceHitCollection;
     LCCollectionVec* _referenceHitVec;    
  
     //! TrackerHit collection name
