@@ -1,4 +1,4 @@
-// Version $Id: EUTelApplyAlignmentProcessor.cc 2889 2013-08-02 11:21:27Z hperrey $
+// Version $Id: EUTelApplyAlignmentProcessor.cc 2918 2013-08-25 19:12:15Z rubinsky $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -116,7 +116,7 @@ EUTelApplyAlignmentProcessor::EUTelApplyAlignmentProcessor ()
   _alignmentCollectionVec(NULL),
   _outputHitCollectionName(""),
   _outputCollectionVec(NULL),
-  _applyToReferenceHitCollection(false),
+  _applyToReferenceHitCollection(true),
   _referenceHitCollectionName(""),
   _referenceHitVec(NULL),
   _outputReferenceHitCollectionName(""),

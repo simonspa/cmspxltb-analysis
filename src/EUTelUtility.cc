@@ -332,10 +332,12 @@ namespace eutelescope {
          * @return vector of solution sorted in descending order
          */
         vector< double > solveQuadratic( double a, double b, double c) {
+		streamlog_out( DEBUG1 ) << "Solving quadratic equation with coefficients:\na: " 
+		<< a << "\nb: " << b << "\nc:" << c << std::endl;
                 //Solutions
-                vector< double > X(2, 0.);              //initialise with two doubles equal 0.
+                vector< double > X;              //initialise with two doubles equal 0.
 
-                if( fabs( a ) > 0. )
+                if( fabs( a ) > 1.E-10 )
                 {
                         //The equation has the form
                         // a*x^2 + b*x + c = 0
@@ -350,8 +352,10 @@ namespace eutelescope {
                         double num1 = -b + disc;
                         double num2 = -b - disc;
 
-                        X[0] = num1 / denom;            //bigger root
-                        X[1] = num2 / denom;            //lower root
+			X.push_back( num1 / denom );	// larger root
+			X.push_back( num2 / denom );	// smaller root
+                        //X[0] = num1 / denom;            // bigger root
+                        //X[1] = num2 / denom;            // lower root
                 }
                 else
                 {
@@ -359,8 +363,10 @@ namespace eutelescope {
                         //The linear equation has the form
                         // b*x + c = 0
 
-                        X[0] = -c/b;
-                        X[1] = -c/b;
+			X.push_back( -c/b );
+			X.push_back( -c/b );
+                        //X[0] = -c/b;
+                        //X[1] = -c/b;
                 }
 
                 return X;

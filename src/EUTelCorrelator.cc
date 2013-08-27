@@ -1,4 +1,4 @@
-// Version $Id: EUTelCorrelator.cc 2889 2013-08-02 11:21:27Z hperrey $
+// Version $Id: EUTelCorrelator.cc 2908 2013-08-13 10:01:43Z hamnett $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -722,7 +722,7 @@ if( static_cast< int >(iplane_unique.size()) > _minNumberOfCorrelatedHits && tra
     }
   } catch (DataNotAvailableException& e  ) {
 
-    streamlog_out  ( WARNING2 ) <<  "No input collection found on event " << event->getEventNumber()
+    streamlog_out  ( MESSAGE2 ) <<  "No input collection found on event " << event->getEventNumber()
                                 << " in run " << event->getRunNumber() << endl;
   }
 

@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelHitMaker.cc 2856 2013-07-14 16:41:22Z diont $
+// Version $Id: EUTelHitMaker.cc 2910 2013-08-13 14:29:04Z hamnett@DESY.DE $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -465,7 +465,7 @@ void EUTelHitMaker::processEvent (LCEvent * event) {
     }
     catch (DataNotAvailableException& e  ) 
     {
-      streamlog_out  ( WARNING9 ) <<  "No input collection " << _pulseCollectionName << " found on event " << event->getEventNumber()
+      streamlog_out  ( MESSAGE2 ) <<  "No input collection " << _pulseCollectionName << " found on event " << event->getEventNumber()
                                   << " in run " << event->getRunNumber() << endl;
       return ;
     }

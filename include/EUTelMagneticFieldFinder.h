@@ -10,9 +10,11 @@
 // system includes <>
 #include <string>
 #include <vector>
+#include <cmath>
 
 // EUTELESCOPE
 #include "EUTelUtility.h"
+#include "EUTelUtilityRungeKutta.h"
 #include "EUTelTrackFitter.h"
 #include "EUTelTrackStateImpl.h"
 #include "EUTelTrackImpl.h"
@@ -27,9 +29,93 @@
 //LCIO
 #include "lcio.h"
 #include "IMPL/TrackerHitImpl.h"
+#include "IMPL/TrackImpl.h"
 
 
 class TrackerHit;
+class TrackImpl;
+
+namespace {
+        /** 
+         * @class Implementation of particles differential
+         * equation of motion
+         */
+        class EOMODE : public ODE {
+          private:
+            DISALLOW_COPY_AND_ASSIGN( EOMODE )
+          public:
+            explicit EOMODE( int neq ) : 
+            ODE(neq),
+            _h() {}
+            
+            virtual ~EOMODE() {};
+            
+            virtual TVectorD evalRHS( const TVectorD& point ) {
+                
+                streamlog_out( DEBUG2 ) << "EOMODE::evalRHS()" << std::endl;
+                
+                streamlog_out( DEBUG0 ) << "Input vector" << std::endl;
+                streamlog_message( DEBUG0, point.Print();, std::endl; );
+                
+                TVectorD result( this->getNEquations() );
+                
+                const double mm = 1000.;
+                const double k = 0.299792458/mm;
+                
+                const double x  = point[ 0 ];
+                const double y  = point[ 1 ];
+                const double tx = point[ 2 ];
+                const double ty = point[ 3 ];
+                const double q  = point[ 4 ];
+                
+                TVector2 a = A( tx, ty );
+                const double dxdz  = tx;
+                const double dydz  = ty;
+                const double dtxdz = q * k * a.X();
+                const double dtydz = q * k * a.Y();
+                
+                result[ 0 ] = dxdz;
+                result[ 1 ] = dydz;
+                result[ 2 ] = dtxdz;
+                result[ 3 ] = dtydz;
+                result[ 4 ] = 0;
+                
+                streamlog_out( DEBUG0 ) << "Result vector" << std::endl;
+                streamlog_message( DEBUG0, result.Print();, std::endl; );
+                
+                streamlog_out( DEBUG2 ) << "-----------------------------EOMODE::evalRHS()------------------------------" << std::endl;
+                
+                return result;
+            }
+            
+            void setBField( const TVector3& h ) {
+                _h = h;
+            }
+            
+          private:
+              /**
+               * Calculation of A vector necessary for rhs of particle's eom
+               * @param tx particle's tx parameter
+               * @param ty particle's ty parameter
+               * 
+               * @return 2d vector A
+               */
+            TVector2 A( double tx, double ty ) const {
+               const double Bx = _h.X();
+               const double By = _h.Y();
+               const double Bz = _h.Z();
+                
+               const double sqrtFactor = sqrt( 1. + tx*tx + ty*ty );
+               const double Ax = sqrtFactor * (  ty * ( tx * Bx + Bz ) - ( 1. + tx*tx ) * By );
+               const double Ay = sqrtFactor * ( -tx * ( ty * By + Bz ) + ( 1. + ty*ty ) * Bx );
+               
+               return TVector2( Ax, Ay );
+            }
+            
+            /** Magnetic field vector */
+            TVector3 _h;
+        };
+}
 
 namespace eutelescope {
     
@@ -83,7 +169,7 @@ namespace eutelescope {
         // Getters and Setters
     public:
 
-        inline std::vector< EUTelTrackImpl* >& getTracks() {
+        inline std::vector< IMPL::TrackImpl* >& getTracks() {
             return _tracks;
         }
                 
@@ -149,10 +235,10 @@ namespace eutelescope {
         double findIntersection( EUTelTrackStateImpl* ts );
         
         /** Propagate track state by dz */
-	void propagateTrack( EUTelTrackStateImpl*, double );
+	void propagateTrackRefPoint( EUTelTrackStateImpl*, double );
         
         /** Update track state and it's cov matrix */
-        void updateTrackState( EUTelTrackStateImpl*, const EVENT::TrackerHit* );
+        double updateTrackState( EUTelTrackStateImpl*, const EVENT::TrackerHit* );
 
         /** Update track propagation matrix for a given step */
 	const TMatrixD& getPropagationJacobianF( const EUTelTrackStateImpl*, double );
@@ -176,9 +262,15 @@ namespace eutelescope {
         TVector3 getPfromCartesianParameters( const EUTelTrackStateImpl* ) const;
         
         /** Calculate position of the track in global 
-         * coordinate system for given arc length calculated
+         * coordinate system for given arc length starting
          * from track's ref. point*/
-        TVector3 getXYZfromArcLenght( const EUTelTrackStateImpl*, double ) const;
+        TVector3 getXYZfromArcLength( const EUTelTrackStateImpl*, double ) const;
+        TVector3 getXYZfromArcLength1( const EUTelTrackStateImpl*, double ) const;
+        
+        /** Calculate position of the track in global 
+         * coordinate system for given arc length starting
+         * from track's ref. point */
+        TVector3 getXYZfromDzNum( const EUTelTrackStateImpl*, double ) const;
 
 	double getXYPredictionPrecision( const EUTelTrackStateImpl* ts ) const;
 
@@ -206,13 +298,19 @@ namespace eutelescope {
         /** Get track state projection matrix */
         TMatrixD getH( const EUTelTrackStateImpl* ) const;
         
+        /** Convert EUTelTrackImpl to TrackImpl */
+        IMPL::TrackImpl* cartesian2LCIOTrack( EUTelTrackImpl* ) const;
+        
         /** Find hit closest to the track */
         const EVENT::TrackerHit* findClosestHit( const EUTelTrackStateImpl*, int );
 
         // Kalman filter states and tracks
     private:       
-        /** Final set of tracks */
-        std::vector< EUTelTrackImpl* > _tracks;
+        /** Final set of tracks for LCIO */
+        std::vector< IMPL::TrackImpl* > _tracks;
+        
+        /** Final set of tracks in cartesian parameterisation */
+        std::vector< EUTelTrackImpl* > _tracksCartesian;
 
         /** Kalman track states */
         std::vector< EUTelTrackStateImpl* > _trackStates;
@@ -265,6 +363,20 @@ namespace eutelescope {
         
         /** Kalman residual covariance matrix */
         TMatrixD _residualCovR;
+        
+    private:
+        /** ODE integrator for equations of motion */
+        EUTelUtilityRungeKutta* _eomIntegrator;
+        
+        /** ODE integrator for Kalman propagation jacobian */
+        EUTelUtilityRungeKutta* _jacobianIntegrator;
+        
+        /** ODE for equations of motion */
+        ODE* _eomODE;
+        
+        /** ODE for Kalman propagation jacobian */
+        ODE* _jacobianODE;
+        
     };
 
 } // namespace eutelescope
