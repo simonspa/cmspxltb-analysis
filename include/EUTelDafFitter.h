@@ -1,4 +1,4 @@
-// Version: $Id: EUTelDafFitter.h 2285 2013-01-18 13:46:44Z hperrey $
+// Version: $Id: EUTelDafFitter.h 2925 2013-09-02 11:02:00Z hamnett $
 //! Author Havard Gjersdal <haavagj@fys.uio.no>
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -68,6 +68,7 @@ namespace eutelescope {
     void addToLCIO(daffitter::TrackCandidate* track);
     //! LCIO switch
     bool _addToLCIO, _fitDuts;
+
   };
   //! A global instance of the processor
   EUTelDafFitter gEUTelDafFitter;

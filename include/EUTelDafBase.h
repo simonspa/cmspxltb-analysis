@@ -1,4 +1,4 @@
-// Version: $Id: EUTelDafBase.h 2889 2013-08-02 11:21:27Z hperrey $
+// Version: $Id: EUTelDafBase.h 2925 2013-09-02 11:02:00Z hamnett $
 //! Author Havard Gjersdal <haavagj@fys.uio.no>
 /*
  *   This source code is part of the Eutelescope package of Marlin.
@@ -152,9 +152,20 @@ namespace eutelescope {
     /*!
      */
     std::string      _referenceHitCollectionName;
+    std::string      _clusterCollectionName;
     bool             _useReferenceHitCollection;
     LCCollectionVec* _referenceHitVec;    
+    LCCollectionVec* _clusterVec;    
  
+    //Should probably make these options in steering file, but for now they can be hard coded here:
+    double minx;
+    double maxx;
+    double miny;
+    double maxy;
+    double binsizex;
+    double binsizey;
+
+    double minclustersize;
 
     //! Silicon planes parameters as described in GEAR
     gear::SiPlanesParameters * _siPlanesParameters;
@@ -175,6 +186,14 @@ namespace eutelescope {
     bool _histogramSwitch;
     //! LCIO switch
     bool _addToLCIO;
+
+    std::map< int, std::vector < double > > _xPositionForClustering;
+    std::map< int, std::vector < double > > _yPositionForClustering;
+    std::map< int, std::vector < double > > _Chi2sForAverage;
+    std::map< int, std::vector < double > > _resolutionXForClustering;
+    std::map< int, std::vector < double > > _resolutionYForClustering;
+    int MAXCLUSTERSIZE;   
+
   };
 }
 #endif

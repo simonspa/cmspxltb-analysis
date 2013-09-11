@@ -1,6 +1,6 @@
 // Contact: Igor Rubinskiy, DESY <mailto:igorrubinsky@gmail.com>
 //
-// Version: $Id: EUTelMille.cc 2895 2013-08-06 15:30:37Z hperrey $
+// Version: $Id: EUTelMille.cc 2927 2013-09-02 15:47:53Z hperrey $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -1153,10 +1153,14 @@ void EUTelMille::processEvent (LCEvent * event) {
   if ( isFirstEvent() )
   {
     FillHotPixelMap(event);
+  }
 
-    if ( _useReferenceHitCollection ) 
-    {
-       _referenceHitVec = dynamic_cast < LCCollectionVec * > (event->getCollection( _referenceHitCollectionName));
+  if ( _useReferenceHitCollection ){
+    try {
+    _referenceHitVec = dynamic_cast < LCCollectionVec * > (event->getCollection( _referenceHitCollectionName));
+    }
+    catch (...){
+      streamlog_out ( ERROR5 ) <<  "Reference Hit Collection " << _referenceHitCollectionName.c_str() << " could not be retrieved for event " << event->getEventNumber()<< "! Please check your steering files! " << endl;
     }
   }
   
