@@ -174,9 +174,6 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
    
   EUTelEventImpl *evt = NULL;
   CMSPixelFileDecoder *readout;
-  // Initialize pixel vector:
-  std::vector< pixel > event_data;
-  int64_t timestamp;
 
   // Initialize geometry:
   initializeGeometry();
@@ -212,9 +209,9 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
   }
 
 
-  // Loop while we have input data
-  while (true)
-    {
+  // Loop while we have input data, break points set in Decoder call:
+  while (true) {
+
       // Check if it's the first event:
       if(_isFirstEvent) {
 	// We are in the first event, so type BORE. Write the run header.
@@ -233,14 +230,13 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	runHeader->setMaxX(IntVec(_noOfROC, _noOfXPixel - 1));
 	runHeader->setMinY(IntVec(_noOfROC, 0));
 	runHeader->setMaxY(IntVec(_noOfROC, _noOfYPixel - 1));
-
 	runHeader->lcRunHeader()->setDetectorName("CMSPixelTelescope");
 
 	// Process the run header:
-	ProcessorMgr::instance ()->processRunHeader ( static_cast<lcio::LCRunHeader*> ( lcHeader.release()) );
+	ProcessorMgr::instance()->processRunHeader(static_cast<lcio::LCRunHeader*>(lcHeader.release()));
             
 	// Book histogramms:
-	if ( _fillHistos ) bookHistos();
+	if(_fillHistos) bookHistos();
 
 	_isFirstEvent = false;
       }
@@ -255,10 +251,11 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       eventNumber++;
 
     
-      // Clear vector and read next event from file, containing all ROCs / pixels for one trigger:
-      event_data.clear();
-        
-      // Read next event from data source:
+      // Initialize pixel vector:
+      std::vector< pixel > event_data;
+      int64_t timestamp;
+
+      // Read next event from file, containing all ROCs / pixels for one trigger:
       status = readout->get_event(&event_data,timestamp);
         
       if(status <= DEC_ERROR_NO_MORE_DATA) {
@@ -283,41 +280,62 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	streamlog_out (DEBUG5) << "Event " << eventNumber << " is empty. Continuing with next." << std::endl;
 	continue;
       }
+      
+      streamlog_out(DEBUG5) << "Event read: " << event_data.size() << " hits" << std::endl;
+      for(std::vector<pixel>::const_iterator it = event_data.begin(); it < event_data.end(); ++it) {
+	streamlog_out(DEBUG5) << "ROC" << (*it).roc << " x" << (*it).col << " y" << (*it).row 
+			      << " ph" << (*it).raw << std::endl;
+      }
 
+      // FIXME
+      if(event_data.empty()) continue;
 
       LCCollectionVec * sparseDataCollection = new LCCollectionVec(LCIO::TRACKERDATA);
 
-      TrackerDataImpl * sparse;
-      EUTelSparseDataImpl<EUTelSimpleSparsePixel>  sparseData( sparse ) ;
 
-      int16_t iROC = -1;
-      for (unsigned int ipx = 0; ipx < event_data.size(); ipx++) {
-	
-	if(iROC != event_data[ipx].roc) {
-	  iROC = event_data[ipx].roc;
-	  sparse = new TrackerDataImpl();
-	  CellIDEncoder<TrackerDataImpl> sparseDataEncoder(EUTELESCOPE::ZSDATADEFAULTENCODING, sparseDataCollection);
-	  sparseDataEncoder["sensorID"]        = iROC;
-	  sparseDataEncoder["sparsePixelType"] = static_cast<int> ( 1 );
-	  sparseDataEncoder.setCellID(sparse);
-	  
-	}
-
-	auto_ptr<EUTelSimpleSparsePixel> sparsePixel( new EUTelSimpleSparsePixel );
-                    
-	sparsePixel->setXCoord( static_cast<int> (event_data[ipx].col ));
-	sparsePixel->setYCoord( static_cast<int> (event_data[ipx].row ));
-	sparsePixel->setSignal( static_cast<short> (event_data[ipx].raw));
-	streamlog_out ( DEBUG0 ) << (*sparsePixel.get()) << endl;
+      // Initialize iterator ROC counter:
+      int16_t iROC = 0;
+      std::vector<pixel>::const_iterator it = event_data.begin();
         
-	//fill histogramms if necessary:
-	if ( _fillHistos ) fillHistos ( event_data[ipx].col, event_data[ipx].row, event_data[ipx].raw, event_data[ipx].roc );
-	sparseData.addSparsePixel( sparsePixel.get() );
+      // Now loop over all ROC chips to be read out:
+      do {
+
+	streamlog_out(DEBUG5) << "Processing ROC " << (*it).roc << std::endl;
+	iROC = (*it).roc;
+
+	// Prepare the sensor's header:
+	TrackerDataImpl * sparse = new TrackerDataImpl();
+	CellIDEncoder<TrackerDataImpl> sparseDataEncoder(EUTELESCOPE::ZSDATADEFAULTENCODING, sparseDataCollection);
+	sparseDataEncoder["sensorID"]        = (*it).roc;
+	sparseDataEncoder["sparsePixelType"] = static_cast<int>(1);
+	sparseDataEncoder.setCellID(sparse);
+	EUTelSparseDataImpl<EUTelSimpleSparsePixel> sparseData(sparse) ;
+                    
+	// Now add all the pixel hits to that sensor:
+	while(iROC == (*it).roc && it != event_data.end()) {
+
+	  // Create a new pixel to be stored:
+	  auto_ptr<EUTelSimpleSparsePixel> sparsePixel(new EUTelSimpleSparsePixel);
+	  sparsePixel->setXCoord( static_cast<int>((*it).col ));
+	  sparsePixel->setYCoord( static_cast<int>((*it).row ));
+	  sparsePixel->setSignal( static_cast<short>((*it).raw));
+	  streamlog_out(DEBUG0) << (*sparsePixel.get()) << endl;
+	    
+	  // Fill histogramms if necessary:
+	  if(_fillHistos) fillHistos((*it).col, (*it).row, (*it).raw, (*it).roc);
+	  sparseData.addSparsePixel(sparsePixel.get());
+	  
+	  // Move on to next pixel hit:
+	  ++it;
+	}
+        
+	streamlog_out(DEBUG5) << sparseData.size() << " pixel hits stored for this ROC." << std::endl;
 	sparseDataCollection->push_back( sparse );
-      }
+            
+      } while(it != event_data.end());
 
-      delete sparse;
-
+      streamlog_out(DEBUG5) << "We stored all pixel hits on " << sparseDataCollection->size() 
+			    << " ROCs, finalising event now..." << std::endl;
 
       // Start constructing current event:
       evt = new EUTelEventImpl();
@@ -330,8 +348,8 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       delete now;
       // ...and write it out:
       evt->addCollection (sparseDataCollection, _sparseDataCollectionName);
-      ProcessorMgr::instance ()->processEvent (static_cast<LCEventImpl*> (evt));
-        
+      ProcessorMgr::instance()->processEvent(static_cast<LCEventImpl*> (evt));
+     
       delete evt;
 
     }; // end of while (true)
@@ -353,8 +371,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
         
   // Print the readout statistics, invoked by the destructor:
   streamlog_out ( MESSAGE5 ) << " ---------------------------------------------------------" << endl;    
-  readout->statistics.print();
-  delete[] readout;
+  delete readout;
   streamlog_out ( MESSAGE5 ) << " ---------------------------------------------------------" << endl;    
 
   // Delete the EORE event:    
