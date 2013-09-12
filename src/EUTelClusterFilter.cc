@@ -1,5 +1,5 @@
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
-// Version $Id: EUTelClusterFilter.cc 2489 2013-03-21 12:16:02Z hamnett $
+// Version $Id: EUTelClusterFilter.cc 2909 2013-08-13 14:25:55Z hamnett@DESY.DE $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -1092,7 +1092,7 @@ void EUTelClusterFilter::processEvent (LCEvent * event) {
     }
     catch (DataNotAvailableException& e )
     {
-        streamlog_out ( WARNING2 )  << "Input collection not found in the current event." << endl;
+        streamlog_out ( MESSAGE2 )  << "Input collection not found in the current event." << endl;
         return;
     }
 }

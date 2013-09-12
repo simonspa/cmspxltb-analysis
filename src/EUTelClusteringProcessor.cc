@@ -1,4 +1,4 @@
-// Version: $Id: EUTelClusteringProcessor.cc 2658 2013-05-31 13:37:08Z hamnett $
+// Version: $Id: EUTelClusteringProcessor.cc 2883 2013-08-02 08:14:49Z spanns $
 // Author Antonio Bulgheroni, INFN <mailto:antonio.bulgheroni@gmail.com>
 // Version $ $
 /*
@@ -106,6 +106,20 @@ EUTelClusteringProcessor::EUTelClusteringProcessor ()
   _ExcludedPlanes(),
   _clusterSpectraNVector(),
   _clusterSpectraNxNVector(),
+  _clusterSignalHistos(),
+  _clusterSizeXHistos(),
+  _clusterSizeYHistos(),
+  _seedSignalHistos(),
+  _hitMapHistos(),
+  _seedSNRHistos(),
+  _clusterNoiseHistos(),
+  _clusterSNRHistos(),
+  _cluster_vs_seedSNRHistos(),
+  _eventMultiplicityHistos(),
+  _clusterSignal_NHistos(),
+  _clusterSNR_NHistos(),
+  _clusterSignal_NxNHistos(),
+  _clusterSNR_NxNHistos(),
   _siPlanesParameters(NULL),
   _siPlanesLayerLayout(NULL),
   _isGeometryReady(false),
@@ -122,21 +136,7 @@ EUTelClusteringProcessor::EUTelClusteringProcessor ()
   hotPixelCollectionVec(NULL),
   hasNZSData(false),
   hasZSData(false),
-  _hitIndexMapVec(),
-  _clusterSignalHistos(),
-  _clusterSizeXHistos(),
-  _clusterSizeYHistos(),
-  _seedSignalHistos(),
-  _hitMapHistos(),
-  _seedSNRHistos(),
-  _clusterNoiseHistos(),
-  _clusterSNRHistos(),
-  _cluster_vs_seedSNRHistos(),
-  _eventMultiplicityHistos(),
-  _clusterSignal_NHistos(),
-  _clusterSNR_NHistos(),
-  _clusterSignal_NxNHistos(),
-  _clusterSNR_NxNHistos()
+  _hitIndexMapVec()
  {
   
   // modify processor description

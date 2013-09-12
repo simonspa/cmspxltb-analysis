@@ -74,7 +74,7 @@ namespace eutelescope {
    *
    *  @author Silvia Bonfanti, Uni. Insubria  <mailto:silviafisica@gmail.com>
    *  @author Loretta Negrini, Uni. Insubria  <mailto:loryneg@gmail.com>
-   *  @version $Id: EUTelCorrelator.h 2577 2013-04-29 12:19:30Z hperrey $
+   *  @version $Id: EUTelCorrelator.h 2889 2013-08-02 11:21:27Z hperrey $
    *
    */
 
@@ -370,7 +370,7 @@ namespace eutelescope {
     /*!
      */
     std::string      _referenceHitCollectionName;
-    bool             _applyToReferenceHitCollection;
+    bool             _useReferenceHitCollection;
     LCCollectionVec* _referenceHitVec;    
  
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)

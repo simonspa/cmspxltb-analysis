@@ -1,5 +1,5 @@
 // Author Philipp Roloff, DESY <mailto:philipp.roloff@desy.de>
-// Version: $Id: EUTelMultiLineFit.cc 2489 2013-03-21 12:16:02Z hamnett $
+// Version: $Id: EUTelMultiLineFit.cc 2883 2013-08-02 08:14:49Z spanns $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -742,11 +742,13 @@ void EUTelMultiLineFit::processEvent (LCEvent * event) {
       _clusterCharge[help] = new double[_nPlanes];
     }
 
-    int fitplane[6] = {0, 0, 0, 0, 0, 0};
+    // Currently unused variable:
+    /* int fitplane[6] = {0, 0, 0, 0, 0, 0};
 
     for (int help = 0; help < _nPlanes; help++) {
       fitplane[help] = 1;
     }
+    */
 
     int _nTracks = 0;
 

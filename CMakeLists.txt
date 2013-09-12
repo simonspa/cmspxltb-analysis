@@ -194,6 +194,10 @@ ADD_SHARED_LIBRARY( ${libname} ${library_sources} )
 INSTALL_SHARED_LIBRARY( ${libname} DESTINATION lib )
 #INSTALL_SHARED_LIBRARY( GBL DESTINATION lib )
 
+# Properly add the CMSPixelDecoder external dependency:
+ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/external/CMSPixelDecoder)
+# ..and link it to libEUTelescope:
+TARGET_LINK_LIBRARIES( ${libname} CMSPixelDecoder )
 
 
 # used for alignment if Eutelescope was build with ROOT support
@@ -331,7 +335,6 @@ endif()
   INCLUDE(jobsub/examples/datura-noDUT/testing.cmake)
   INCLUDE(jobsub/examples/datura-alone/testing.cmake)
   INCLUDE(jobsub/examples/anemone-2FEI4/testing.cmake)
-  INCLUDE(pysub/examples/anemone-2FEI4/testing.cmake)
 
   configure_file (
 	       ./CTestCustom.cmake.in   # set custom settings (e.g. tests to be skipped for valgrind)

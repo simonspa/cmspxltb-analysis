@@ -110,6 +110,7 @@ _fixedAlignmentZShfitPlaneIds(),
 _fixedAlignmentXRotationPlaneIds(),
 _fixedAlignmentYRotationPlaneIds(),
 _fixedAlignmentZRotationPlaneIds(),
+_excludePlanesFromFit(),
 _runPede(false),
 _alignmentConstantLCIOFile("alignment.slcio"),
 _maxChi2Cut(1000.),
@@ -190,6 +191,8 @@ _aidaHistoMap2D()
     registerOptionalParameter("FixedAlignmentPlanesYrotation", "Ids of planes for which rotation around Y will be fixed during millepede call", _fixedAlignmentYRotationPlaneIds, IntVec());
     
     registerOptionalParameter("FixedAlignmentPlanesZrotation", "Ids of planes for which rotation around Z will be fixed during millepede call", _fixedAlignmentZRotationPlaneIds, IntVec());
+    
+    registerOptionalParameter("ExcludePlanesFromFit", "Ids of planes that will be excluded from the fit", _excludePlanesFromFit, IntVec());
     
     // Pede run control
     
@@ -405,7 +408,9 @@ void EUTelProcessorTrackingGBLTrackFit::processEvent(LCEvent * evt) {
         TVectorD downWeight(200);
         const int nTracks = trackCandidates.size();
         streamlog_out(DEBUG1) << "N tracks found " << nTracks << endl;
-        if (nTracks == 1) {     //! ACHTUNG!!!!!!!!
+
+        // for alignment nTracks == 1, for tracking nTracks>0
+        if ( _alignmentMode ? nTracks == 1 : nTracks >0 ) {
             _trackFitter->SetTrackCandidates(trackCandidates);
             _trackFitter->FitTracks();
             //
@@ -528,7 +533,7 @@ void EUTelProcessorTrackingGBLTrackFit::processEvent(LCEvent * evt) {
     if (isFirstEvent()) _isFirstEvent = false;
 }
 
-void EUTelProcessorTrackingGBLTrackFit::check(LCEvent * evt) {
+void EUTelProcessorTrackingGBLTrackFit::check(LCEvent * /* evt */) {
     // nothing to check here
 }
 
@@ -565,7 +570,9 @@ void EUTelProcessorTrackingGBLTrackFit::runPede() {
         streamlog_out( ERROR5 ) << "Pede cannot be executed: command not found in the path" << endl;
     } else {
 
-        bool encounteredError = false;
+        // Currently unused variable:
+        //bool encounteredError = false;
+
         // output multiplexing: parse pede output in both stdout and stderr and echo messages accordingly
         char buf[1024];
         std::streamsize n;
@@ -578,7 +585,7 @@ void EUTelProcessorTrackingGBLTrackFit::runPede() {
                     streamlog_out( ERROR5 ).write( buf, n ).flush( );
                     string error ( buf, n );
                     pedeerrors << error;
-                    encounteredError = true;
+                    //encounteredError = true;
                 }
                 if ( pede.eof( ) ) {
                     finished[0] = true;
@@ -630,8 +637,8 @@ bool EUTelProcessorTrackingGBLTrackFit::parseMilleOutput( const string& milleRes
     if ( !parsepede.is_open( ) ) {
         streamlog_out( ERROR5 ) << "Pede cannot be executed: command not found in the path" << endl;
     } else {
-
-        bool encounteredError = false;
+        // Currently unused variable:
+        // bool encounteredError = false;
         // output multiplexing: parse parsepede output in both stdout and stderr and echo messages accordingly
         char buf[1024];
         std::streamsize n;
@@ -644,7 +651,7 @@ bool EUTelProcessorTrackingGBLTrackFit::parseMilleOutput( const string& milleRes
                     streamlog_out( ERROR5 ).write( buf, n ).flush( );
                     string error ( buf, n );
                     parsepedeerrors << error;
-                    encounteredError = true;
+                    //encounteredError = true;
                 }
                 if ( parsepede.eof( ) ) {
                     finished[0] = true;
@@ -695,10 +702,12 @@ void EUTelProcessorTrackingGBLTrackFit::moveMilleResultFile( const string& oldMi
     
     // If file was found in current folder rename it
     const int result = rename( oldMilleResultFileName.c_str() , newMilleResultFileName.c_str() );
-    if ( result == 0 )
+    if ( result == 0 ) {
         streamlog_out( MESSAGE4 ) << "File " << oldMilleResultFileName << " was renamed to " << newMilleResultFileName << endl;
-    else
+    }
+    else {
         streamlog_out( ERROR1 ) << "Error renaming file " << oldMilleResultFileName << endl;
+    }
     
 }
 
@@ -838,8 +847,6 @@ void EUTelProcessorTrackingGBLTrackFit::writeMilleSteeringFile() {
     } // end loop over all planes
 
     steerFile << endl;
-    steerFile << "method inversion 5 0.001" << endl;
-    steerFile << "chiscut 50.0 10." << endl;
     for ( StringVec::iterator it = _pedeSteerAddCmds.begin( ); it != _pedeSteerAddCmds.end( ); ++it ) {
         // two backslashes will be interpreted as newline
         if ( *it == "\\\\" )
@@ -847,9 +854,6 @@ void EUTelProcessorTrackingGBLTrackFit::writeMilleSteeringFile() {
         else
             steerFile << *it << " ";
     }
-    steerFile << endl;
-    steerFile << "outlierdownweighting 4" << endl;
-    steerFile << "!histprint" << endl;
     steerFile << endl;
     steerFile << "end" << endl;
 

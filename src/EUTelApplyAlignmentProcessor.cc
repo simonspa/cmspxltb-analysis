@@ -1,4 +1,4 @@
-// Version $Id: EUTelApplyAlignmentProcessor.cc 2869 2013-07-29 11:24:38Z spanns $
+// Version $Id: EUTelApplyAlignmentProcessor.cc 2918 2013-08-25 19:12:15Z rubinsky $
 /*
  *   This source code is part of the Eutelescope package of Marlin.
  *   You are free to use this source files for your own development as
@@ -116,7 +116,7 @@ EUTelApplyAlignmentProcessor::EUTelApplyAlignmentProcessor ()
   _alignmentCollectionVec(NULL),
   _outputHitCollectionName(""),
   _outputCollectionVec(NULL),
-  _applyToReferenceHitCollection(false),
+  _applyToReferenceHitCollection(true),
   _referenceHitCollectionName(""),
   _referenceHitVec(NULL),
   _outputReferenceHitCollectionName(""),
@@ -166,15 +166,12 @@ EUTelApplyAlignmentProcessor::EUTelApplyAlignmentProcessor ()
                             "The name of the output hit collection",
                             _outputHitCollectionName, string("PreAlignedHit"));
 
-  registerOptionalParameter("ReferenceCollection","This is the name of the reference hit collection",
-                            internal_referenceHitCollectionName, static_cast< string > ( "referenceHit" ) );
+  registerOptionalParameter("ReferenceCollection","This is the name of the reference hit collection", internal_referenceHitCollectionName, static_cast< string > ( "referenceHit" ) );
 
-  registerOptionalParameter("OutputReferenceCollection","This is the name of the modified output reference hit collection",
-                            _outputReferenceHitCollectionName, static_cast< string > ( "output_refhit" ) );
+  registerOptionalParameter("OutputReferenceCollection","This is the name of the modified output reference hit collection", _outputReferenceHitCollectionName, static_cast< string > ( "output_refhit" ) );
 
 
-   registerOptionalParameter("ApplyToReferenceCollection","Do you want the reference hit collection to be corrected by the shifts and tilts from the alignment collection? (default - false )",
-                            _applyToReferenceHitCollection, static_cast< bool   > ( false ));
+   registerOptionalParameter("ApplyToReferenceCollection","Do you want the reference hit collection to be corrected by the shifts and tilts from the alignment collection?", _applyToReferenceHitCollection, static_cast< bool   > ( true ));
  
 
 
@@ -188,7 +185,7 @@ EUTelApplyAlignmentProcessor::EUTelApplyAlignmentProcessor ()
 
   // now the optional parameters
   registerProcessorParameter ("ApplyAlignmentDirection",
-                              "Available directinos are:\n"
+                              "Available directions are:\n"
                               " 0 -> direct  \n"
                               " 1 -> reverse ",
                               _applyAlignmentDirection, static_cast<int > (0));

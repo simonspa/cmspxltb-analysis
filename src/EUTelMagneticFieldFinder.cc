@@ -18,11 +18,17 @@
 #include "TVectorD.h"
 #include "TMatrixD.h"
 #include "TMatrixDSym.h"
+#include "EUTelUtilityRungeKutta.h"
 #endif
+
+//LCIO
+#include "IMPL/TrackImpl.h"
 
 #include <iostream>
 #include <functional>
 #include <algorithm>
+#include <cmath>
+#include <math.h>
 
 namespace eutelescope {
 
@@ -39,7 +45,7 @@ namespace eutelescope {
     }
     
     EUTelKalmanFilter::EUTelKalmanFilter() : EUTelTrackFitter( "KalmanFilter" ), 
-            _tracks(), 
+            _tracksCartesian(), 
             _trackStates(), 
             _allHits(),
             _allMeasurements(),
@@ -55,10 +61,25 @@ namespace eutelescope {
             _trkParamCovCkkm1(5,5),
             _processNoiseQ(5,5),
             _gainK(5,2),
-            _residualCovR(2,2){}
+            _residualCovR(2,2),
+            _eomIntegrator( new EUTelUtilityRungeKutta() ),
+            _jacobianIntegrator( new EUTelUtilityRungeKutta() ),
+            _eomODE( 0 ),
+            _jacobianODE( 0 ){
+                // Initialise ODE integrators for eom and jacobian       
+                {
+                    _eomODE = new EOMODE(5);
+                    _eomIntegrator->setRhs( _eomODE );
+                    _eomIntegrator->setButcherTableau( new ButcherTableauDormandPrince );
+                }
+
+                {
+                    _jacobianIntegrator->setButcherTableau( new ButcherTableauDormandPrince );
+                }
+            }
 
     EUTelKalmanFilter::EUTelKalmanFilter( std::string name ) : EUTelTrackFitter( name ),
-            _tracks(),
+            _tracksCartesian(),
             _trackStates(), 
             _allHits(),
             _allMeasurements(),
@@ -74,9 +95,29 @@ namespace eutelescope {
             _trkParamCovCkkm1(5,5),
             _processNoiseQ(5,5),
             _gainK(5,2),
-            _residualCovR(2,2){}
+            _residualCovR(2,2),
+            _eomIntegrator( new EUTelUtilityRungeKutta() ),
+            _jacobianIntegrator( new EUTelUtilityRungeKutta() ),
+            _eomODE( 0 ),
+            _jacobianODE( 0 ){
+                // Initialise ODE integrators for eom and jacobian       
+                {
+                    _eomODE = new EOMODE(5);
+                    // _eomIntegrator integrator becomes the owner of _eomODE and ButcherTableauDormandPrince
+                    _eomIntegrator->setRhs( _eomODE );
+                    _eomIntegrator->setButcherTableau( new ButcherTableauDormandPrince );
+                }
 
-    EUTelKalmanFilter::~EUTelKalmanFilter() {}
+                {
+                    _jacobianIntegrator->setRhs( _jacobianODE );
+                    _jacobianIntegrator->setButcherTableau( new ButcherTableauDormandPrince );
+                }
+            }
+
+    EUTelKalmanFilter::~EUTelKalmanFilter() { 
+        delete _eomIntegrator;
+        delete _jacobianIntegrator;
+    }
     
     /** Perform Kalman filter track search and track fit */
     void EUTelKalmanFilter::FitTracks() {
@@ -92,10 +133,10 @@ namespace eutelescope {
         
         // Initialise Kalman filter states
         initialiseSeeds();
-
+        
 	// Start Kalman filter
 	std::vector< EUTelTrackImpl* >::iterator itTrk;
-	for ( itTrk = _tracks.begin(); itTrk != _tracks.end(); ) {
+	for ( itTrk = _tracksCartesian.begin(); itTrk != _tracksCartesian.end(); ) {
             bool isGoodTrack = true;
             
             EUTelTrackStateImpl* state = const_cast<EUTelTrackStateImpl*>((*itTrk)->getTrackState( EUTelTrackStateImpl::AtFirstHit ));
@@ -103,13 +144,13 @@ namespace eutelescope {
 	    double dz = findIntersection( state );
             if ( dz < 0 ) {
                 isGoodTrack = false;
-                itTrk = _tracks.erase( itTrk );
+                itTrk = _tracksCartesian.erase( itTrk );
             }
-            
+                        
             // iterate until the particle flies out of the detector volume
             while ( dz > 0 ) {
 
-                propagateTrack( state, dz );
+                propagateTrackRefPoint( state, dz );
                 // Calculate track's new position
                 const float* xnew = ( state )->getReferencePoint( );
 
@@ -121,7 +162,7 @@ namespace eutelescope {
                 } else {
                     streamlog_out ( MESSAGE0 ) << "New point is outside of any sensor volume." << std::endl;
                     streamlog_out ( MESSAGE0 ) << "Removing this track candidate from further consideration." << std::endl;
-                    itTrk = _tracks.erase( itTrk );
+                    itTrk = _tracksCartesian.erase( itTrk );
                     findhit = false;
                     isGoodTrack = false;
                     break;
@@ -131,31 +172,37 @@ namespace eutelescope {
                 // @TODO Allow missing hits
                 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 EVENT::TrackerHit* closestHit = const_cast< EVENT::TrackerHit* > ( findClosestHit( state, newSensorID ) );
-                if ( !closestHit ) {
+                if ( closestHit ) {
+                    const double distance = getResidual( state, closestHit ).Norm2Sqr( );
+                    const double distanceCut = getXYPredictionPrecision( state );
+                    if ( distance > distanceCut ) {
+                        streamlog_out ( DEBUG1 ) << "Closest hit is outside of search window." << std::endl;
+                        streamlog_out ( DEBUG1 ) << "Skipping current plane." << std::endl;
+//                        itTrk = _tracks.erase( itTrk );
+                        findhit = false;
+//                        isGoodTrack = false;
+//                        break;
+                    }
+                } else {
                     streamlog_out ( DEBUG1 ) << "There are no hits in the closest plane." << std::endl;
-                    streamlog_out ( DEBUG1 ) << "Removing this track candidate from further consideration." << std::endl;
-                    itTrk = _tracks.erase( itTrk );
+//                    streamlog_out ( DEBUG1 ) << "Removing this track candidate from further consideration." << std::endl;
+//                    itTrk = _tracks.erase( itTrk );
                     findhit = false;
-                    isGoodTrack = false;
-                    break;
+//                    isGoodTrack = false;
+//                    break;
                 }
                 
-                const double distance = getResidual( state, closestHit ).Norm2Sqr( );
-                const double distanceCut = getXYPredictionPrecision( state );
-                if ( distance > distanceCut ) {
-                    streamlog_out ( DEBUG1 ) << "Closest hit is outside of search window." << std::endl;
-                    streamlog_out ( DEBUG1 ) << "Removing this track candidate from further consideration." << std::endl;
-                    itTrk = _tracks.erase( itTrk );
-                    findhit = false;
-                    isGoodTrack = false;
-                    break;
-                }
                 if ( findhit ) {
                     getPropagationJacobianF( state, dz );
-                    updateTrackState( state, closestHit );
+                    propagateTrackState( state );
+                    double chi2 = (*itTrk)->getChi2() + updateTrackState( state, closestHit );
+                    (*itTrk)->setChi2( chi2 );
                     (*itTrk)->addHit( closestHit );
+               } else {
+                    getPropagationJacobianF( state, dz );
+                    propagateTrackState( state );
                 }
-                
+
                 // find next intersection
                 dz = findIntersection( state );
             }
@@ -163,16 +210,18 @@ namespace eutelescope {
             if ( isGoodTrack && ( *itTrk )->getTrackerHits( ).size( ) < geo::gGeometry( ).nPlanes( ) - _allowedMissingHits ) {
                 streamlog_out ( DEBUG1 ) << "Track candidate has to many missing hits." << std::endl;
                 streamlog_out ( DEBUG1 ) << "Removing this track candidate from further consideration." << std::endl;
-                itTrk = _tracks.erase( itTrk );
+                itTrk = _tracksCartesian.erase( itTrk );
                 isGoodTrack = false;
             }
-            
+ 
             if ( isGoodTrack ) {
+                state->setLocation( EUTelTrackStateImpl::AtLastHit );
+                _tracks.push_back( cartesian2LCIOTrack( *itTrk ) );
                 ++itTrk;
             }
-            
+
 	} //for ( itTrk = _tracks.begin(); itTrk != _tracks.end(); )
-        
+
 	streamlog_out(DEBUG2) << "------------------------------EUTelKalmanFilter::FitTracks()---------------------------------" << std::endl;
     }
     
@@ -201,7 +250,7 @@ namespace eutelescope {
             _isReady = false;
             return _isReady;
         }
-        
+                
         streamlog_out(DEBUG2) << "Initialisation successfully completed" << std::endl;
         streamlog_out(DEBUG2) << "------------------------------EUTelKalmanFilter::initialise()------------------------------" << std::endl;
         return _isReady;
@@ -210,6 +259,7 @@ namespace eutelescope {
     void EUTelKalmanFilter::reset() {
         streamlog_out(DEBUG2) << "EUTelKalmanFilter::reset()" << std::endl;
         _tracks.clear();
+        _tracksCartesian.clear();
         _trackStates.clear();
         streamlog_out(DEBUG2) << "-------------------------------EUTelKalmanFilter::reset()-----------------------------------" << std::endl;
     }
@@ -252,19 +302,20 @@ namespace eutelescope {
             const int sensorID = Utility::GuessSensorID( *itHit );
             double temp[] = {0.,0.,0.};
             geo::gGeometry().local2Master( sensorID, uvpos, temp);
-            float posGlobal[] = { temp[0], temp[1], temp[2] };
+            float posGlobal[] = { (float) temp[0], (float) temp[1], (float) temp[2] };
                         
             gear::Vector3D vectorGlobal( temp[0], temp[1], temp[2] );
             const double q          = _beamQ;      // assume electron beam
-            const double invp       = fabs(q)/_beamE;
+            //const double invp       = fabs(q)/_beamE;
+            const double invp       = q/_beamE;
             
             // Fill track parameters covariance matrix
             float trkCov[15] = {0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,0.};
             
             const EVENT::FloatVec uvcov = (*itHit)->getCovMatrix();
-            // X,Y covariances are defined by seeding hit uncertainty
-            trkCov[0] = uvcov[0];                               //cov(x,x)
-            trkCov[1] = uvcov[1];   trkCov[2] = uvcov[2];       //cov(y,x), cov(y,y)
+            // initial X,Y covariances are defined by seeding hit uncertainty multiplied by a huge factor
+            trkCov[0] = uvcov[0]*1.E4;                               //cov(x,x)
+            trkCov[1] = uvcov[1]*1.E4;   trkCov[2] = uvcov[2]*1.E4;       //cov(y,x), cov(y,y)
             // TX,TY covariances are defined by beam spread at the first plane
             
             if ( _beamAngularSpread[0] > 0. ) trkCov[5] = _beamAngularSpread[0] * _beamAngularSpread[0];          //cov(tx,x)=0, cov(tx,y)=0, cov(tx,tx)
@@ -285,7 +336,7 @@ namespace eutelescope {
             EUTelTrackImpl* track = new EUTelTrackImpl;
             track->addHit( (*itHit) );
             track->addTrackState( state );
-            _tracks.push_back( track );
+            _tracksCartesian.push_back( track );
         }
         
         streamlog_out(DEBUG2) << "--------------------------------EUTelKalmanFilter::initialiseSeeds()---------------------------" << std::endl;
@@ -297,7 +348,8 @@ namespace eutelescope {
      */
     TVector3 EUTelKalmanFilter::getPfromCartesianParameters( const EUTelTrackStateImpl* ts ) const {
         streamlog_out(DEBUG2) << "EUTelKalmanFilter::getPfromCartesianParameters()" << std::endl;
-        const double p  = 1. / ts->getInvP() * fabs( _beamQ );
+        //const double p  = 1. / ts->getInvP() * fabs( _beamQ );
+        const double p  = 1. / ts->getInvP() * _beamQ;
         const double tx = ts->getTx();
         const double ty = ts->getTy();
         const double px = p*tx / sqrt( 1. + tx*tx + ty*ty );
@@ -312,32 +364,33 @@ namespace eutelescope {
     /**
      * Find closest surface intersected by the track and propagate track to that point
      * @param ts track state
-     * @return Success flag
+     * @return dz or -999 on failure
      */
     double EUTelKalmanFilter::findIntersection( EUTelTrackStateImpl* ts ) {
         streamlog_out(DEBUG2) << "EUTelKalmanFilter::findIntersection()" << std::endl;
         
-        bool success = true;
-        
-        // Get magnetic field vector
-        gear::Vector3D vectorGlobal( 0.,0.,0. );        // assuming uniform magnetic field running along X direction
-        const double bx         = geo::gGeometry().getMagneticFiled().at( vectorGlobal ).x();
-        const double by         = geo::gGeometry().getMagneticFiled().at( vectorGlobal ).y();
-        const double bz         = geo::gGeometry().getMagneticFiled().at( vectorGlobal ).z();
-        TVector3 hVec(bx,by,bz);
-        
-        // Calculate track momentum from track parameters
-        TVector3 pVec = getPfromCartesianParameters( ts );
-        const double p = pVec.Mag();
-        const double k = -0.299792458*_beamQ*hVec.Mag();
-        const double rho = k/p;
-        
-        // Calculate track position
+        // Get track position
         const float* x = ts->getReferencePoint();
         const double x0 = x[0];
         const double y0 = x[1];
         const double z0 = x[2];
         TVector3 trkVec(x0,y0,z0);
+        
+        // Get magnetic field vector
+        gear::Vector3D vectorGlobal( x0, y0, z0 );        // assuming uniform magnetic field running along X direction
+        const gear::BField&   B = geo::gGeometry().getMagneticFiled();
+	const double bx         = B.at( vectorGlobal ).x();
+	const double by         = B.at( vectorGlobal ).y();
+	const double bz         = B.at( vectorGlobal ).z();
+        TVector3 hVec(bx,by,bz);
+	const double H = hVec.Mag();
+        
+        // Calculate track momentum from track parameters
+        TVector3 pVec = getPfromCartesianParameters( ts );
+        const double p = pVec.Mag();
+	const double mm = 1000.;
+        const double k = -0.299792458/mm*_beamQ*H;
+        const double rho = k/p; 
         
         // Determine id of the sensor in which track reference point is located
         int sensorID = geo::gGeometry().getSensorID( x );
@@ -348,7 +401,6 @@ namespace eutelescope {
         
         if ( sensorID < 0 ) {
             streamlog_out ( DEBUG3 ) << "Track interseciton was not found" << std::endl;
-            success = false;
             return -999.;
         }
         
@@ -378,7 +430,7 @@ namespace eutelescope {
                                    geo::gGeometry().siPlaneYPosition( *itPlaneId ),
                                    geo::gGeometry().siPlaneZPosition( *itPlaneId ) );
             TVector3 delta = trkVec - sensorCenter;
-            TVector3 pVecCrosH = pVec.Cross( hVec );
+            TVector3 pVecCrosH = pVec.Cross( hVec.Unit() );
 
             if ( streamlog_level(DEBUG0) ) {
 	     streamlog_out (DEBUG0) << "-------------------------------------------" << std::endl;
@@ -397,32 +449,35 @@ namespace eutelescope {
             const double b = planesNorm[*itPlaneId].Dot( pVec ) / p;
             const double c = planesNorm[*itPlaneId].Dot( delta );
             
-            // solutions are sorted in descending order
+            // solutions are sorted in ascending order
             std::vector< double > sol = Utility::solveQuadratic(a,b,c);
             
-            TVector3 newPos1 = getXYZfromArcLenght( ts, sol[0] );
-            TVector3 newPos2 = getXYZfromArcLenght( ts, sol[1] );
-            
-	    streamlog_out (DEBUG0) << "Next intersected volume: " << *itPlaneId << std::endl;
+            TVector3 newPos[2];
+	    newPos[0] = getXYZfromArcLength( ts, sol[0] );
+	    newPos[1] = getXYZfromArcLength( ts, sol[1] );
+
+	    streamlog_out (DEBUG0) << "Next intersected volume can be: " << *itPlaneId << std::endl;
 	    streamlog_out (DEBUG0) << "Plane: " << *itPlaneId << std::endl;
 	    streamlog_out (DEBUG0) << "Solutions for arc length: " << std::setw(15) << sol[0] << std::setw(15) << sol[1] << std::endl;
-	    streamlog_out (DEBUG0) << "First solution (X,Y,Z): " << std::setw(15) << newPos1.X() 
-								 << std::setw(15) << newPos1.Y() 
-								 << std::setw(15) << newPos1.Z() << std::endl;
-	    streamlog_out (DEBUG0) << "Second solution (X,Y,Z): " << std::setw(15) << newPos2.X() 
-								 << std::setw(15) << newPos2.Y() 
-								 << std::setw(15) << newPos2.Z() << std::endl;
-
+	    streamlog_out (DEBUG0) << "First solution (X,Y,Z): " << std::setw(15) << newPos[0].X() 
+								 << std::setw(15) << newPos[0].Y() 
+								 << std::setw(15) << newPos[0].Z() << std::endl;
+	    streamlog_out (DEBUG0) << "Second solution (X,Y,Z): " << std::setw(15) << newPos[1].X() 
+								 << std::setw(15) << newPos[1].Y() 
+								 << std::setw(15) << newPos[1].Z() << std::endl;
 //        } // for ( itPlaneId = sensID.begin(); itPlaneId != sensID.end(); ++itPlaneId ) {
 
         // Choose solution with minimal positive arc length. It will correspond to the closest point along the helix
-        double dz = ( sol[1] > 0. ) ? sol[1] : ( ( sol[1] < 0. && sol[0] > 0. ) ? sol[0] : 0. );
+	double solution = ( sol[0] > 0. ) ? sol[0] : ( ( sol[0] < 0. && sol[1] > 0. ) ? sol[1] : -1. );
+        int solutionNum = ( sol[0] > 0. ) ? 0 : ( ( sol[0] < 0. && sol[1] > 0. ) ? 1 : -1 );
+	double dz = ( solution > 0. ) ? newPos[ solutionNum ].Z() - trkVec.Z() : -1.;
 
         if ( dz < 1.E-6 ) {
-            streamlog_out ( DEBUG3 ) << "Track interseciton was not found" << std::endl;
-            success = false;
+            streamlog_out ( DEBUG3 ) << "Track intersection was not found" << std::endl;
             return -999;
         }       
+        
+//          getXYZfromDzNum( ts, dz );
         
         streamlog_out(DEBUG2) << "-------------------------EUTelKalmanFilter::findIntersection()--------------------------" << std::endl;
         
@@ -434,33 +489,38 @@ namespace eutelescope {
      * @param ts track state
      * @param dz propagation distance
      */
-    void EUTelKalmanFilter::propagateTrack( EUTelTrackStateImpl* ts, double dz ) {
-        streamlog_out(DEBUG2) << "EUTelKalmanFilter::propagateTrackState()" << std::endl;
+    void EUTelKalmanFilter::propagateTrackRefPoint( EUTelTrackStateImpl* ts, double dz ) {
+        streamlog_out(DEBUG2) << "EUTelKalmanFilter::propagateTrackRefPoint()" << std::endl;
           // The formulas below are derived from equations of motion of the particle in 
           // magnetic field under assumption |dz| small. Must be valid for |dz| < 10 cm
-
-          // Get magnetic field vector
-          gear::Vector3D vectorGlobal( 0.,0.,0. );        // assuming uniform magnetic field running along X direction
-          const double Bx = geo::gGeometry().getMagneticFiled().at( vectorGlobal ).x();
-          const double By = geo::gGeometry().getMagneticFiled().at( vectorGlobal ).y();
-          const double Bz = geo::gGeometry().getMagneticFiled().at( vectorGlobal ).z();
-	  const double k = 0.299792458;
 
 	  // Get track parameters
 	  const double invP = ts->getInvP();
 	  const double x0 = ts->getX();
 	  const double y0 = ts->getY();
+	  //const double x0 = ts->getReferencePoint()[0];
+	  //const double y0 = ts->getReferencePoint()[1];
 	  const double z0 = ts->getReferencePoint()[2];
 	  const double tx0 = ts->getTx();
 	  const double ty0 = ts->getTy();
+
+          // Get magnetic field vector
+          gear::Vector3D vectorGlobal( x0, y0, z0 );        // assuming uniform magnetic field
+	  const gear::BField&   B = geo::gGeometry().getMagneticFiled();
+	  const double Bx         = B.at( vectorGlobal ).x();
+	  const double By         = B.at( vectorGlobal ).y();
+	  const double Bz         = B.at( vectorGlobal ).z();
+	  const double mm = 1000.;
+	  const double k = 0.299792458/mm;
+          
 	  const double sqrtFactor = sqrt( 1. + tx0*tx0 + ty0*ty0 );
 
 	  const double Ax = sqrtFactor * (  ty0 * ( tx0 * Bx + Bz ) - ( 1. + tx0*tx0 ) * By );
 	  const double Ay = sqrtFactor * ( -tx0 * ( ty0 * By + Bz ) + ( 1. + ty0*ty0 ) * Bx );
 
-	  const double x = x0 + tx0 * dz + 0.5 * k * invP * Ax * dz*dz;
-	  const double y = y0 + ty0 * dz + 0.5 * k * invP * Ay * dz*dz;
-
+	  double x = x0 + tx0 * dz + 0.5 * k * invP * Ax * dz*dz;
+	  double y = y0 + ty0 * dz + 0.5 * k * invP * Ay * dz*dz;
+          
 //	  const double tx = tx0 + invP * k * Ax * dz;
 //	  const double ty = ty0 + invP * k * Ay * dz;
 
@@ -475,28 +535,16 @@ namespace eutelescope {
 				  << std::setw(15) << ts->getReferencePoint()[1]
 				  << std::setw(15) << ts->getReferencePoint()[2] << std::endl;
 
-	  const float newPos[] = {x, y, z0+dz};
+	  const float newPos[] = {(float) x, (float) y, (float) (z0+dz)};
 	  ts->setLocation( EUTelTrackStateImpl::AtOther );
 	  ts->setReferencePoint( newPos );
           
-          /* !!!!!!!!!!!!!!!!!!! THIS MUST BE DONE BY F jacobian matrix !!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
-//	  ts->setX(x);
-//	  ts->setY(y);
-//	  ts->setTx(tx);
-//	  ts->setTy(ty);
-
-//	  streamlog_out( DEBUG0 ) << "New track state (x,y,tx,ty,invP):" << std::endl;
-//	  streamlog_out( DEBUG0 ) << std::setw(15) << x
-//				  << std::setw(15) << y
-//				  << std::setw(15) << tx
-//				  << std::setw(15) << ty
-//				  << std::setw(15) << invP << std::endl;
 	  streamlog_out( DEBUG0 ) << "New track ref point (x,y,z):" << std::endl;
 	  streamlog_out( DEBUG0 ) << std::setw(15) << ts->getReferencePoint()[0]
 				  << std::setw(15) << ts->getReferencePoint()[1]
 				  << std::setw(15) << ts->getReferencePoint()[2] << std::endl;
                                   
-          streamlog_out(DEBUG2) << "-------------------EUTelKalmanFilter::propagateTrackState()-------------------" << std::endl;
+          streamlog_out(DEBUG2) << "-------------------EUTelKalmanFilter::propagateTrackRefPoint()-------------------" << std::endl;
     }
     
     /** Find the hit closest to the intersection of a track with given sensor
@@ -526,20 +574,28 @@ namespace eutelescope {
         streamlog_out(DEBUG0) << "N hits in plane " << sensorID << ": " << hitInPlane.size() << std::endl;
         for ( itHit = hitInPlane.begin(); itHit != hitInPlane.end(); ++itHit ) {
 	    const double distance = getResidual( ts, *itHit ).Norm2Sqr();
+            streamlog_out(DEBUG0) << "Distance^2 between hit and track intersection: " << distance << std::endl;
             if ( distance < maxDistance ) {
 		itClosestHit = itHit;
 		maxDistance = distance;
 	    }
-            streamlog_out(DEBUG0) << "Distance^2 between hit and track intersection: " << maxDistance << std::endl;
         }
-        
+        streamlog_out(DEBUG0) << "Minimal distance^2 between hit and track intersection: " << maxDistance << std::endl;
         streamlog_out(DEBUG2) << "----------------------EUTelKalmanFilter::findClosestHit()------------------------" << std::endl;
 
 	return *itClosestHit;
     }
     
-    double EUTelKalmanFilter::getXYPredictionPrecision( const EUTelTrackStateImpl* ts ) const {
-	return 0.2;
+  double EUTelKalmanFilter::getXYPredictionPrecision( const EUTelTrackStateImpl* ts ) const {
+      streamlog_out(DEBUG2) << "EUTelKalmanFilter::getXYPredictionPrecision()" << std::endl;
+      
+      TMatrixDSym Ckkm1 = getTrackStateCov(ts);
+      double xyPrec = 0.5;//sqrt( Ckkm1[0][0]*Ckkm1[0][0] + Ckkm1[1][1]*Ckkm1[1][1] );
+      
+      streamlog_out(DEBUG0) << "Minimal combined UV resolution : " << xyPrec << std::endl;
+      streamlog_out(DEBUG2) << "----------------------EUTelKalmanFilter::getXYPredictionPrecision()------------------------" << std::endl;
+
+      return xyPrec;
     }
 
     /** Calculate track parameters propagation jacobian for given track state
@@ -555,20 +611,24 @@ namespace eutelescope {
 	// The formulas below are derived from equations of motion of the particle in
         // magnetic field under assumption |dz| small. Must be valid for |dz| < 10 cm
 
-        // Get magnetic field vector
-        gear::Vector3D vectorGlobal( 0.,0.,0. );        // assuming uniform magnetic field running along X direction
-        const double Bx = geo::gGeometry().getMagneticFiled().at( vectorGlobal ).x();
-        const double By = geo::gGeometry().getMagneticFiled().at( vectorGlobal ).y();
-        const double Bz = geo::gGeometry().getMagneticFiled().at( vectorGlobal ).z();
-	const double k = 0.299792458;
+	const double mm = 1000.;
+	const double k = 0.299792458/mm;
 
 	// Get track parameters
 	const double invP = ts->getInvP();
-	//const double x0 = ts->getX();
-        //const double y0 = ts->getY();
-        //const double z0 = ts->getReferencePoint()[2];
+	const double x0 = ts->getX();
+        const double y0 = ts->getY();
+        const double z0 = ts->getReferencePoint()[2];
         const double tx0 = ts->getTx();
         const double ty0 = ts->getTy();
+
+        // Get magnetic field vector
+        gear::Vector3D vectorGlobal( x0, y0, z0 );        // assuming uniform magnetic field
+	const gear::BField&   B = geo::gGeometry().getMagneticFiled();
+        const double Bx         = B.at( vectorGlobal ).x();
+        const double By         = B.at( vectorGlobal ).y();
+        const double Bz         = B.at( vectorGlobal ).z();
+        
         const double sqrtFactor = sqrt( 1. + tx0*tx0 + ty0*ty0 );
 
 	const double Ax = sqrtFactor * (  ty0 * ( tx0 * Bx + Bz ) - ( 1. + tx0*tx0 ) * By );
@@ -614,38 +674,41 @@ namespace eutelescope {
     
     /**
      * Get extrapolated position of the track in global coordinate system
-     * Extrapolation performed along the helix. Formulas are valid for vanishing magnetic field.
+     * Extrapolation performed along the helix. Formulas are also valid for vanishing magnetic field.
      * 
      * @param ts track state
      * @param s arc length
      * @return 3d vector of coordinates in the global coordinate system
      */
-    TVector3 EUTelKalmanFilter::getXYZfromArcLenght( const EUTelTrackStateImpl* ts, double s ) const {
-        streamlog_out(DEBUG2) << "EUTelKalmanFilter::getXYZfromArcLenght()" << std::endl;
-        // Get magnetic field vector
-        gear::Vector3D vectorGlobal( 0.,0.,0. );        // assuming uniform magnetic field running along X direction
-        const double bx         = geo::gGeometry().getMagneticFiled().at( vectorGlobal ).x();
-        const double by         = geo::gGeometry().getMagneticFiled().at( vectorGlobal ).y();
-        const double bz         = geo::gGeometry().getMagneticFiled().at( vectorGlobal ).z();
-        TVector3 hVec(bx,by,bz);
-               
-        TVector3 pVec = getPfromCartesianParameters( ts );
-
-        const double p = pVec.Mag();
-        const double k = -0.299792458*_beamQ*hVec.Mag();
-        const double rho = k/p;
+    TVector3 EUTelKalmanFilter::getXYZfromArcLength1( const EUTelTrackStateImpl* ts, double s ) const {
+        streamlog_out(DEBUG2) << "EUTelKalmanFilter::getXYZfromArcLength()" << std::endl;
         
-        // Calculate starting track position
+        // Get starting track position
         const float* x = ts->getReferencePoint();
         const double x0 = x[0];
         const double y0 = x[1];
         const double z0 = x[2];
         
+        // Get magnetic field vector
+        gear::Vector3D vectorGlobal( x0, y0, z0 );        // assuming uniform magnetic field running along X direction
+	const gear::BField&   B = geo::gGeometry().getMagneticFiled();
+        const double bx         = B.at( vectorGlobal ).x();
+        const double by         = B.at( vectorGlobal ).y();
+        const double bz         = B.at( vectorGlobal ).z();
+        TVector3 hVec(bx,by,bz);
+               
+        TVector3 pVec = getPfromCartesianParameters( ts );
+
+        const double p = pVec.Mag();
+	const double mm = 1000.;
+        const double k = -0.299792458/mm*_beamQ*hVec.Mag();
+        const double rho = k/p;
+               
         // Calculate end track position
 	TVector3 pos;
 	if ( fabs( k ) > 1.E-6  ) {
 		// Non-zero magnetic field case
-        	pos.SetX( x0 + 1./p * pVec.X() * s);
+        	pos.SetX( x0 + 1./p * pVec.X() * s );
 		pos.SetY( y0 + 1./k * pVec.Y() * sin( rho*s ) + 1./k * pVec.Z() * ( 1. - cos( rho*s ) ) );
                 pos.SetZ( z0 + 1./k * pVec.Z() * sin( rho*s ) - 1./k * pVec.Y() * ( 1. - cos( rho*s ) ) );
         } else {
@@ -657,9 +720,112 @@ namespace eutelescope {
 		pos.SetZ( z0 + 1./p * pVec.Z() * s );
 	}
         
-        streamlog_out(DEBUG2) << "---------------------------------EUTelKalmanFilter::getXYZfromArcLenght()------------------------------------" << std::endl;
+        streamlog_out(DEBUG2) << "---------------------------------EUTelKalmanFilter::getXYZfromArcLength()------------------------------------" << std::endl;
         
         return pos;
+    }
+
+    /**
+     * Get extrapolated position of the track in global coordinate system
+     * Extrapolation performed along the helix. Formulas are also valid for vanishing magnetic field.
+     * 
+     * @param ts track state
+     * @param s arc length
+     * @return 3d vector of coordinates in the global coordinate system
+     */
+    TVector3 EUTelKalmanFilter::getXYZfromArcLength( const EUTelTrackStateImpl* ts, double s ) const {
+        streamlog_out(DEBUG2) << "EUTelKalmanFilter::getXYZfromArcLength()" << std::endl;
+        
+        // Get starting track position
+        const float* x = ts->getReferencePoint();
+        const double x0 = x[0];
+        const double y0 = x[1];
+        const double z0 = x[2];
+        
+        // Get magnetic field vector
+        gear::Vector3D vectorGlobal( x0, y0, z0 );        // assuming uniform magnetic field running along X direction
+	const gear::BField&   B = geo::gGeometry().getMagneticFiled();
+        const double bx         = B.at( vectorGlobal ).x();
+        const double by         = B.at( vectorGlobal ).y();
+        const double bz         = B.at( vectorGlobal ).z();
+        TVector3 hVec(bx,by,bz);
+               
+        TVector3 pVec = getPfromCartesianParameters( ts );
+
+	const double H = hVec.Mag();
+        const double p = pVec.Mag();
+	const double mm = 1000.;
+        const double k = -0.299792458/mm*_beamQ*H;
+        const double rho = k/p;
+        
+        // Calculate end track position
+	TVector3 pos( x0, y0, z0 );
+	if ( fabs( k ) > 1.E-6  ) {
+		// Non-zero magnetic field case
+		TVector3 pCrossH = pVec.Cross(hVec.Unit());
+		TVector3 pCrossHCrossH = pCrossH.Cross(hVec.Unit());
+		const double pDotH = pVec.Dot(hVec.Unit());
+		TVector3 temp1 = pCrossHCrossH;	temp1 *= ( -1./k * sin( rho * s ) );
+		TVector3 temp2 = pCrossH;       temp2 *= ( -1./k * ( 1. - cos( rho * s ) ) );
+		TVector3 temp3 = hVec;          temp3 *= ( pDotH / p * s );
+		pos += temp1;
+		pos += temp2;
+		pos += temp3;
+        } else {
+		// Vanishing magnetic field case
+		const double cosA = cosAlpha( ts );
+		const double cosB = cosBeta( ts );
+		pos.SetX( x0 + cosA * s );
+		pos.SetY( y0 + cosB * s );
+		pos.SetZ( z0 + 1./p * pVec.Z() * s );
+	}
+        
+        streamlog_out(DEBUG2) << "---------------------------------EUTelKalmanFilter::getXYZfromArcLength()------------------------------------" << std::endl;
+        
+        return pos;
+    }
+    
+    /**
+     * Get extrapolated position of the track in global coordinate system
+     * Extrapolation performed along the helix. Formulas are also valid for vanishing magnetic field.
+     * Calculation is based on numerical integration of equations of motion
+     * 
+     * @param ts track state
+     * @param s arc length
+     * @return 3d vector of coordinates in the global coordinate system
+     */
+    TVector3 EUTelKalmanFilter::getXYZfromDzNum( const EUTelTrackStateImpl* ts, double dz ) const {
+        streamlog_out(DEBUG2) << "EUTelKalmanFilter::getXYZfromDzNum()" << std::endl;
+        
+        // Get starting track position
+        
+        TVectorD trackStateVec = getTrackStateVec( ts );
+	const float* x = ts->getReferencePoint();
+        const double x0 = x[0];
+        const double y0 = x[1];
+        const double z0 = x[2];
+        
+        // Get magnetic field vector
+        gear::Vector3D vectorGlobal( x0, y0, z0 );        // assuming uniform magnetic field running along X direction
+	const gear::BField&   B = geo::gGeometry().getMagneticFiled();
+        const double bx         = B.at( vectorGlobal ).x();
+        const double by         = B.at( vectorGlobal ).y();
+        const double bz         = B.at( vectorGlobal ).z();
+        TVector3 hVec(bx,by,bz);
+        
+        // Setup the equation
+	trackStateVec[0] = x0;
+	trackStateVec[1] = y0;
+        static_cast< EOMODE* >(_eomODE)->setInitValue( trackStateVec );
+        static_cast< EOMODE* >(_eomODE)->setBField( hVec );
+        
+        // Integrate
+        TVectorD result = _eomIntegrator->integrate( dz );
+        
+        streamlog_out(DEBUG0) << "Result of the integration:" << std::endl;
+        streamlog_message( DEBUG0, result.Print();, std::endl; );
+        
+        streamlog_out(DEBUG2) << "---------------------------------EUTelKalmanFilter::getXYZfromDzNum()------------------------------------" << std::endl;
     }
 
     /** Calculate cos of the angle between Z(beam) and X(solenoid field axis)
@@ -754,9 +920,13 @@ namespace eutelescope {
         TVectorD xkm1 = getTrackStateVec( ts );
         TVectorD xkkm1 = _jacobianF * xkm1;
         
-        _processNoiseQ.Zero();
-        TMatrixDSym Ckm1 = getTrackStateCov( ts );
-        TMatrixDSym Ckkm1 = Ckm1.Similarity( _jacobianF );        //Ckkm1 += _processNoiseQ;
+        streamlog_message( DEBUG0, xkkm1.Print();, std::endl; );
+        
+        ts->setX( xkkm1[0] );
+        ts->setY( xkkm1[1] );
+        ts->setTx( xkkm1[2] );
+        ts->setTy( xkkm1[3] );
+        ts->setInvP( xkkm1[4] );
         
         streamlog_out( DEBUG2 ) << "-----------------------------------EUTelKalmanFilter::propagateTrackState()----------------------------------" << std::endl;
     }
@@ -796,7 +966,7 @@ namespace eutelescope {
         TVectorD mk(2); 
         mk[0] = uvpos[0];          mk[1] = uvpos[1];
         
-	TVector3 trkPointVec = getXYZfromArcLenght( ts, 0. );
+	TVector3 trkPointVec = getXYZfromArcLength( ts, 0. );
         double trkPoint[] = { trkPointVec.X(), trkPointVec.Y(), trkPointVec.Z() };
 	double trkPointLocal[] = {0.,0.,0.};
 	geo::gGeometry().master2Local(trkPoint,trkPointLocal);
@@ -895,7 +1065,7 @@ namespace eutelescope {
      * @param ts track state
      * @param hit
      */
-    void EUTelKalmanFilter::updateTrackState( EUTelTrackStateImpl* ts, const EVENT::TrackerHit* hit ) {
+    double EUTelKalmanFilter::updateTrackState( EUTelTrackStateImpl* ts, const EVENT::TrackerHit* hit ) {
         streamlog_out( DEBUG2 ) << "EUTelKalmanFilter::updateTrackState()" << std::endl;
         TVectorD rkkm1(2);      rkkm1 = getResidual( ts, hit );
         TVectorD xk(5);         xk = getTrackStateVec( ts );
@@ -937,14 +1107,17 @@ namespace eutelescope {
         ts -> setTy( xk[3] );
         ts -> setInvP( xk[4] );
         
-        float trkCov[15] = { Ck[0][0], Ck[1][0], Ck[1][1], 
-                             Ck[2][0], Ck[2][1], Ck[2][2],
-                             Ck[3][0], Ck[3][1], Ck[3][2],
-                             Ck[3][3], Ck[4][0], Ck[4][1],
-                             Ck[4][2], Ck[4][3], Ck[4][4] };
+        float trkCov[15] = { (float) Ck[0][0], (float) Ck[1][0], (float) Ck[1][1], 
+                             (float) Ck[2][0], (float) Ck[2][1], (float) Ck[2][2],
+                             (float) Ck[3][0], (float) Ck[3][1], (float) Ck[3][2],
+                             (float) Ck[3][3], (float) Ck[4][0], (float) Ck[4][1],
+                             (float) Ck[4][2], (float) Ck[4][3], (float) Ck[4][4] };
 
         ts->setCovMatrix( trkCov );
         ts->setLocation( EUTelTrackStateImpl::AtOther );
+
+        const float newPos[] = {(float) xk[0], (float) xk[1], (float) ts->getReferencePoint()[2]};
+        ts->setReferencePoint( newPos );
         
         double chi2 = 0.;
         
@@ -974,6 +1147,8 @@ namespace eutelescope {
         streamlog_out( DEBUG0 ) << "Chi2 contribution of the hit: " << chi2 << std::endl;
         
         streamlog_out( DEBUG2 ) << "------------------------------------------EUTelKalmanFilter::updateTrackState()----------------------------------" << std::endl;
+        
+        return chi2;
     }
     
     /** Retrieve track state projection onto measurement space matrix
@@ -985,7 +1160,7 @@ namespace eutelescope {
         streamlog_out( DEBUG2 ) << "EUTelKalmanFilter::getH()" << std::endl;
         TMatrixD H(2,5);
         H.Zero();
-        TVector3 trkPointVec = getXYZfromArcLenght( ts, 0. );
+        TVector3 trkPointVec = getXYZfromArcLength( ts, 0. );
         double trkPoint[] = { trkPointVec.X(), trkPointVec.Y(), trkPointVec.Z() };
         const TGeoHMatrix* globalH = geo::gGeometry().getHMatrix( trkPoint );
         
@@ -1015,6 +1190,72 @@ namespace eutelescope {
         }
         
         return H;
+    }
+
+    /**
+     * Convert EUTelTrackImpl representation to LCIO's TrackImpl class
+     * 
+     * @param track track to be converted
+     * 
+     * @return converted track object
+     */
+    IMPL::TrackImpl* EUTelKalmanFilter::cartesian2LCIOTrack( EUTelTrackImpl* track ) const {
+        IMPL::TrackImpl* LCIOtrack = new IMPL::TrackImpl;
+
+        const EUTelTrackStateImpl* ts = track->getTrackState( EUTelTrackStateImpl::AtLastHit );
+        const float* r = ts->getReferencePoint();
+        const double rx = r[0];
+        const double ry = r[1];
+        const double rz = r[2];
+        
+        LCIOtrack->setReferencePoint( r );
+        // Assign hits to LCIO TRACK
+        const EVENT::TrackerHitVec& trkcandhits = track->getTrackerHits();
+        EVENT::TrackerHitVec::const_iterator itrHit;
+        for ( itrHit = trkcandhits.begin(); itrHit != trkcandhits.end(); ++itrHit ) {
+             LCIOtrack->addHit( *itrHit );
+        }
+        
+        const double tx =   track->getTx();
+        const double ty =   track->getTy();
+        const double x =    track->getX();
+        const double y =    track->getY();
+        const double invP = track->getY();
+        
+        // Get magnetic field vector
+        gear::Vector3D vectorGlobal( rx, ry, rz );        // assuming uniform magnetic field running along X direction
+	const gear::BField&   B = geo::gGeometry().getMagneticFiled();
+        const double bx         = B.at( vectorGlobal ).x();
+        const double by         = B.at( vectorGlobal ).y();
+        const double bz         = B.at( vectorGlobal ).z();
+        TVector3 h(bx,by,bz);
+               
+        TVector3 p = getPfromCartesianParameters( ts );
+
+	const double H = h.Mag();
+	const double mm = 1000.;
+        const double k = -0.299792458/mm*_beamQ*H;
+        
+        const double pt  = p.Y()*p.Y() + p.Z()*p.Z();
+        
+        const double om  =    _beamQ/( pt );
+        const double d0  =    0.;               // d0 in the plane transverse to magnetic field vector
+        const double z0  =    0.;               // z0 along the magnetic field
+        const double phi =    atan2( p.Z(), p.Y() );
+        const double tanlam = 0.;
+        
+        const double chi2 = track->getChi2();
+        LCIOtrack->setChi2( chi2 );
+        LCIOtrack->setNdf( trkcandhits.size() ); // NDF contains number of hits used for the fit
+        
+        LCIOtrack->setOmega( om );
+        LCIOtrack->setD0( d0 );
+        LCIOtrack->setZ0( z0 );
+        LCIOtrack->setPhi( phi );
+        LCIOtrack->setTanLambda( tanlam );
+
+        return LCIOtrack;
+
     }
     
     /**

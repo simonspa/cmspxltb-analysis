@@ -301,6 +301,13 @@ void EUTelProcessorTrackingExhaustiveTrackSearch::processEvent(LCEvent * evt) {
         int nHitsOnTrack = 0;
         vector< EVENT::TrackerHitVec >::const_iterator itrk = trackCandidates.begin();
         for ( ; itrk != trackCandidates.end(); ++itrk ) {
+		streamlog_out(MESSAGE0) << "Track hits start:==============" << std::endl;
+		EVENT::TrackerHitVec::const_iterator itTrkHits;
+		for ( itTrkHits = itrk->begin() ; itTrkHits != itrk->end(); ++itTrkHits ) {
+			const double* uvpos = (*itTrkHits)->getPosition();
+			streamlog_out(MESSAGE0) << "Hit (id="  ") global(x,y) coordinates: (" << uvpos[0] << "," << uvpos[1] << ")" << std::endl;
+		}
+            streamlog_out(MESSAGE0) << "Track hits end:==============" << std::endl;
             nHitsOnTrack = itrk->size();
             static_cast<AIDA::IHistogram1D*> (_aidaHistoMap1D[ _histName::_numberOfHitOnTrackCandidateHistName ]) -> fill(nHitsOnTrack);
         }
@@ -370,13 +377,6 @@ int EUTelProcessorTrackingExhaustiveTrackSearch::FillHits(LCEvent * evt,
             }
         }
 
-        if (hit->getType() == kEUTelAPIXClusterImpl) {
-            TrackerDataImpl * clusterFrame = static_cast<TrackerDataImpl*> (clusterVector[0]);
-            EUTelSparseClusterImpl< EUTelAPIXSparsePixel > *apixCluster = new EUTelSparseClusterImpl< EUTelAPIXSparsePixel > (clusterFrame);
-            int sensorID = apixCluster->getDetectorID();
-            bool skipHit = false;
-        }
-
         const int localSensorID = Utility::GuessSensorID( hit );  // localSensorID == -1, if detector ID was not found
         const int numberAlongZ = geo::gGeometry().sensorIDtoZOrder( localSensorID );
         if ( localSensorID >= 0 ) allHitsArray[ numberAlongZ ].push_back( hit );
@@ -443,7 +443,7 @@ void EUTelProcessorTrackingExhaustiveTrackSearch::addTrackCandidateToCollection(
 
 }
 
-void EUTelProcessorTrackingExhaustiveTrackSearch::check(LCEvent * evt) {
+void EUTelProcessorTrackingExhaustiveTrackSearch::check(LCEvent * /*evt*/) {
     // nothing to check here
 }
 

@@ -81,7 +81,7 @@ namespace eutelescope {
    *        recompiling the code.
    *
    * \author A.F.Zarnecki, University of Warsaw
-   * @version $Id: EUTelDUTHistograms.h 2616 2013-05-16 18:01:28Z hperrey $
+   * @version $Id: EUTelDUTHistograms.h 2889 2013-08-02 11:21:27Z hperrey $
    *
    */
 
@@ -169,7 +169,7 @@ protected:
     /*!
      */
     std::string      _referenceHitCollectionName;
-    bool             _applyToReferenceHitCollection;
+    bool             _useReferenceHitCollection;
     LCCollectionVec* _referenceHitVec;    
 
     //! Silicon planes parameters as described in GEAR

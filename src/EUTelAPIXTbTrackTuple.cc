@@ -1,4 +1,4 @@
-// Version: $Id: EUTelAPIXTbTrackTuple.cc 2530 2013-04-03 10:03:44Z hamnett $
+// Version: $Id: EUTelAPIXTbTrackTuple.cc 2889 2013-08-02 11:21:27Z hperrey $
 // eutelescope inlcudes
 #include "EUTelAPIXTbTrackTuple.h"
 #include "EUTelVirtualCluster.h"
@@ -168,7 +168,7 @@ EUTelAPIXTbTrackTuple::EUTelAPIXTbTrackTuple()
   registerOptionalParameter("ReadInClusterBased","Do not readin collection by collection but with the correct mapping between clusters, zsdata and hits", _clusterBased, true);
 
   registerOptionalParameter("ReferenceCollection","This is the name of the reference it collection (init at 0,0,0)",
-                           _referenceHitCollectionName, static_cast< string > ( "reference" ) );
+                           _referenceHitCollectionName, static_cast< string > ( "referenceHit" ) );
  
   // other processor parameters:
   registerProcessorParameter ("OutputPath",
