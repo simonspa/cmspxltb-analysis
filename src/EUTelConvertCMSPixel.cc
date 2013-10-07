@@ -298,7 +298,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       std::vector<pixel>::const_iterator it = event_data.begin();
         
       // Now loop over all ROC chips to be read out:
-      do {
+      while(it != event_data.end()) {
 
 	streamlog_out(DEBUG5) << "Processing ROC " << (*it).roc << std::endl;
 	iROC = (*it).roc;
@@ -332,7 +332,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	streamlog_out(DEBUG5) << sparseData.size() << " pixel hits stored for this ROC." << std::endl;
 	sparseDataCollection->push_back( sparse );
             
-      } while(it != event_data.end());
+      }
 
       streamlog_out(DEBUG5) << "We stored all pixel hits on " << sparseDataCollection->size() 
 			    << " ROCs, finalising event now..." << std::endl;
