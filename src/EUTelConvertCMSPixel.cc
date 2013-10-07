@@ -276,7 +276,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       else if(status <= DEC_ERROR_INVALID_ROC_HEADER) {
 	streamlog_out (DEBUG5) << "Issue with ROC header or pixel address in event " << eventNumber << ". Event will be used anyway." << std::endl;
       }
-      else if(_writeEmptyEvents && status == DEC_ERROR_EMPTY_EVENT) {
+      else if(!_writeEmptyEvents && status == DEC_ERROR_EMPTY_EVENT) {
 	streamlog_out (DEBUG5) << "Event " << eventNumber << " is empty. Continuing with next." << std::endl;
 	continue;
       }
