@@ -62,6 +62,8 @@ using namespace eutelescope;
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
 std::string EUTelConvertCMSPixel::_hitMapHistoName              = "hitMap";
 std::string EUTelConvertCMSPixel::_pulseHeightHistoName        	= "pulseHeight";
+std::string EUTelConvertCMSPixel::_triggerPhaseHistoName        = "triggerPhase";
+std::string EUTelConvertCMSPixel::_triggerPhaseHitHistoName        = "triggerPhaseHit";
 #endif
 
 
@@ -123,7 +125,6 @@ void EUTelConvertCMSPixel::init () {
   _runNumber = atoi(_srunNumber.c_str());
   _isFirstEvent = true;
   eventNumber = 0;
-  iROC = 0;
     
   if(_haveTBM) flags += FLAG_HAVETBM;
   if(_useIPBus) flags += FLAG_16BITS_PER_WORD;
@@ -253,10 +254,10 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
     
       // Initialize pixel vector:
       std::vector< pixel > event_data;
-      int64_t timestamp;
+      CMSPixel::timing evt_timing;
 
       // Read next event from file, containing all ROCs / pixels for one trigger:
-      status = readout->get_event(&event_data,timestamp);
+      status = readout->get_event(&event_data,evt_timing);
         
       if(status <= DEC_ERROR_NO_MORE_DATA) {
 	streamlog_out (ERROR) << "Decoder returned error " << status << std::endl;
@@ -290,34 +291,39 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       LCCollectionVec * sparseDataCollection = new LCCollectionVec(LCIO::TRACKERDATA);
 
 
+      // Fill the trigger phase histograms:
+      (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHistoName]))->fill((int)evt_timing.trigger_phase);
+      if(!event_data.empty()) (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHitHistoName]))->fill((int)evt_timing.trigger_phase);
+
       // Initialize iterator ROC counter:
-      int16_t iROC = 0;
       std::vector<pixel>::const_iterator it = event_data.begin();
         
       // Now loop over all ROC chips to be read out:
-      while(it != event_data.end()) {
+      for(int16_t iROC = 0; iROC < _noOfROC; iROC++) {
+	//      while(it != event_data.end()) {
 
-	streamlog_out(DEBUG5) << "Processing ROC " << (*it).roc << std::endl;
-	iROC = (*it).roc;
+	//streamlog_out(DEBUG5) << "Processing ROC " << (*it).roc << std::endl;
+	streamlog_out(DEBUG5) << "Processing ROC " << iROC << std::endl;
+	//iROC = (*it).roc;
 
 	// Prepare the sensor's header:
 	TrackerDataImpl * sparse = new TrackerDataImpl();
 	CellIDEncoder<TrackerDataImpl> sparseDataEncoder(EUTELESCOPE::ZSDATADEFAULTENCODING, sparseDataCollection);
-	sparseDataEncoder["sensorID"]        = (*it).roc;
+	sparseDataEncoder["sensorID"]        = iROC;//(*it).roc;
 	sparseDataEncoder["sparsePixelType"] = static_cast<int>(1);
 	sparseDataEncoder.setCellID(sparse);
 	EUTelSparseDataImpl<EUTelSimpleSparsePixel> sparseData(sparse) ;
-                    
+        
 	// Now add all the pixel hits to that sensor:
-	while(iROC == (*it).roc && it != event_data.end()) {
-
+	while(it != event_data.end() && iROC == (*it).roc) {
+	  streamlog_out(DEBUG5) << "At ROC " << (*it).roc << ", still having hit data..." << std::endl;
 	  // Create a new pixel to be stored:
 	  auto_ptr<EUTelSimpleSparsePixel> sparsePixel(new EUTelSimpleSparsePixel);
 	  sparsePixel->setXCoord( static_cast<int>((*it).col ));
 	  sparsePixel->setYCoord( static_cast<int>((*it).row ));
 	  sparsePixel->setSignal( static_cast<short>((*it).raw));
 	  streamlog_out(DEBUG0) << (*sparsePixel.get()) << endl;
-	    
+	  
 	  // Fill histogramms if necessary:
 	  if(_fillHistos) fillHistos((*it).col, (*it).row, (*it).raw, (*it).roc);
 	  sparseData.addSparsePixel(sparsePixel.get());
@@ -325,7 +331,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	  // Move on to next pixel hit:
 	  ++it;
 	}
-        
+	
 	streamlog_out(DEBUG5) << sparseData.size() << " pixel hits stored for this ROC." << std::endl;
 	sparseDataCollection->push_back( sparse );
             
@@ -341,7 +347,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       evt->setRunNumber (_runNumber);
       evt->setEventNumber (eventNumber);
       LCTime * now = new LCTime();
-      evt->setTimeStamp(timestamp);
+      evt->setTimeStamp(evt_timing.timestamp);
       delete now;
       // ...and write it out:
       evt->addCollection (sparseDataCollection, _sparseDataCollectionName);
@@ -419,6 +425,17 @@ void EUTelConvertCMSPixel::bookHistos() {
     pulseHeightHisto->setTitle(pulseHeightTitle.c_str());
 				
   }
+
+  tempHistoName = _triggerPhaseHistoName;
+  AIDA::IHistogram1D * triggerPhaseHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 10,-1,8);
+  _aidaHistoMap.insert(make_pair(tempHistoName, triggerPhaseHisto));
+  triggerPhaseHisto->setTitle("Trigger Phase");
+
+  tempHistoName = _triggerPhaseHitHistoName;
+  AIDA::IHistogram1D * triggerPhaseHitHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 10,-1,8);
+  _aidaHistoMap.insert(make_pair(tempHistoName, triggerPhaseHitHisto));
+  triggerPhaseHitHisto->setTitle("Trigger Phase of events w/ pixel hit");
+
   streamlog_out ( MESSAGE5 )  << "end of Booking histograms " << endl;
 }
 #endif // USE_AIDA || MARLIN_USE_AIDA
