@@ -287,9 +287,6 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 			      << " ph" << (*it).raw << std::endl;
       }
 
-      // FIXME
-      if(event_data.empty()) continue;
-
       LCCollectionVec * sparseDataCollection = new LCCollectionVec(LCIO::TRACKERDATA);
 
 
