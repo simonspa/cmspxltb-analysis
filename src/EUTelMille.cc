@@ -1227,7 +1227,7 @@ void EUTelMille::processEvent (LCEvent * event) {
         try {
           collection = event->getCollection(_hitCollectionName[i]);
         } catch (DataNotAvailableException& e) {
-          streamlog_out ( WARNING2 ) << "No input collection " << _hitCollectionName[i] << " found for event " << event->getEventNumber()
+          streamlog_out ( MESSAGE2 ) << "No input collection " << _hitCollectionName[i] << " found for event " << event->getEventNumber()
                                      << " in run " << event->getRunNumber() << endl;
           throw SkipEventException(this);
         }
@@ -1442,7 +1442,7 @@ void EUTelMille::processEvent (LCEvent * event) {
     try {
       collection = event->getCollection(_trackCollectionName);
     } catch (DataNotAvailableException& e) {
-      streamlog_out ( WARNING2 ) << "No input track collection " << _trackCollectionName  << " found for event " << event->getEventNumber()
+      streamlog_out ( MESSAGE2 ) << "No input track collection " << _trackCollectionName  << " found for event " << event->getEventNumber()
                                  << " in run " << event->getRunNumber() << endl;
       throw SkipEventException(this);
     }
@@ -1513,7 +1513,7 @@ void EUTelMille::processEvent (LCEvent * event) {
     try {
       collection = event->getCollection(_trackCollectionName);
     } catch (DataNotAvailableException& e) {
-      streamlog_out ( WARNING2 ) << "No input track collection " << _trackCollectionName  << " found for event " << event->getEventNumber()
+      streamlog_out ( MESSAGE2 ) << "No input track collection " << _trackCollectionName  << " found for event " << event->getEventNumber()
                                  << " in run " << event->getRunNumber() << endl;
       throw SkipEventException(this);
     }
@@ -1544,7 +1544,7 @@ void EUTelMille::processEvent (LCEvent * event) {
               try {
                 collection = event->getCollection(_hitCollectionName[i]);
               } catch (DataNotAvailableException& e) {
-                streamlog_out ( WARNING2 ) << "No input collection " << _hitCollectionName[i] << " found for event " << event->getEventNumber()
+                streamlog_out ( MESSAGE2 ) << "No input collection " << _hitCollectionName[i] << " found for event " << event->getEventNumber()
                                            << " in run " << event->getRunNumber() << endl;
                 throw SkipEventException(this);
               }
