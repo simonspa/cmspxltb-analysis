@@ -4,7 +4,6 @@
 
 // CMSPixel includes
 #include "EUTelConvertCMSPixel.h"
-#include "CMSPixelDecoder/CMSPixelDecoder.h"
 
 // EUTelescope includes
 #include "EUTELESCOPE.h"
@@ -64,6 +63,7 @@ std::string EUTelConvertCMSPixel::_hitMapHistoName              = "hitMap";
 std::string EUTelConvertCMSPixel::_pulseHeightHistoName        	= "pulseHeight";
 std::string EUTelConvertCMSPixel::_triggerPhaseHistoName        = "triggerPhase";
 std::string EUTelConvertCMSPixel::_triggerPhaseHitHistoName        = "triggerPhaseHit";
+std::string EUTelConvertCMSPixel::_dcolMonitorHistoName        = "dcolMonitor";
 #endif
 
 
@@ -325,7 +325,8 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	  streamlog_out(DEBUG0) << (*sparsePixel.get()) << endl;
 	  
 	  // Fill histogramms if necessary:
-	  if(_fillHistos) fillHistos((*it).col, (*it).row, (*it).raw, (*it).roc);
+	  if(_fillHistos) fillHistos((*it).col, (*it).row, (*it).raw, (*it).roc, evt_timing.timestamp);
+
 	  sparseData.addSparsePixel(sparsePixel.get());
 	  
 	  // Move on to next pixel hit:
@@ -388,7 +389,7 @@ void EUTelConvertCMSPixel::end () {
 
 
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
-void EUTelConvertCMSPixel::fillHistos (int xCoord, int yCoord, int value, int sensorID) {
+void EUTelConvertCMSPixel::fillHistos (int xCoord, int yCoord, int value, int sensorID, int64_t timestamp) {
 
   string tempHistoName;
 			
@@ -397,6 +398,12 @@ void EUTelConvertCMSPixel::fillHistos (int xCoord, int yCoord, int value, int se
 			
   tempHistoName = _pulseHeightHistoName + "_d" + to_string( sensorID );
   (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[tempHistoName]))->fill(value);
+
+  // RAL IPBus boards report 1us ticks as timestamp. Here we display 10 seconds;
+  double time = timestamp/1E4;
+  tempHistoName = _dcolMonitorHistoName + "_d" + to_string( sensorID );
+  (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double>(time), static_cast<double >(xCoord), 1.);
+
 }
 
 
@@ -416,25 +423,31 @@ void EUTelConvertCMSPixel::bookHistos() {
     AIDA::IHistogram2D * hitMapHisto =
       AIDAProcessor::histogramFactory(this)->createHistogram2D( (basePath + tempHistoName).c_str(), _noOfXPixel, 0, _noOfXPixel, _noOfYPixel, 0, _noOfYPixel);
     _aidaHistoMap.insert(make_pair(tempHistoName, hitMapHisto));
-    hitMapHisto->setTitle("Hit map");
+    hitMapHisto->setTitle("Hit map;pixels X;pixels Y");
 
-    string pulseHeightTitle = "pulse height ROC" + to_string( iDetector );
+    string pulseHeightTitle = "pulse height ROC" + to_string( iDetector ) + ";ADC counts;# events";
     tempHistoName = _pulseHeightHistoName + "_d" + to_string( iDetector );
     AIDA::IHistogram1D * pulseHeightHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D( (basePath + tempHistoName).c_str(), 525,-1050,1050);
     _aidaHistoMap.insert(make_pair(tempHistoName, pulseHeightHisto));
     pulseHeightHisto->setTitle(pulseHeightTitle.c_str());
+
+    string dcolMonitorTitle = "DCOL hits over time, ROC" + to_string( iDetector ) + ";time / 10ms;column ID;hits per 10ms";
+    tempHistoName = _dcolMonitorHistoName + "_d" + to_string( iDetector );
+    AIDA::IHistogram2D * dcolMonitorHisto = AIDAProcessor::histogramFactory(this)->createHistogram2D( (basePath + tempHistoName).c_str(), 1001, 0, 1000, 52, 0, 51);
+    _aidaHistoMap.insert(make_pair(tempHistoName, dcolMonitorHisto));
+    dcolMonitorHisto->setTitle(dcolMonitorTitle.c_str());
 				
   }
 
   tempHistoName = _triggerPhaseHistoName;
   AIDA::IHistogram1D * triggerPhaseHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 10,-1,8);
   _aidaHistoMap.insert(make_pair(tempHistoName, triggerPhaseHisto));
-  triggerPhaseHisto->setTitle("Trigger Phase");
+  triggerPhaseHisto->setTitle("Trigger Phase;phase bits; # events");
 
   tempHistoName = _triggerPhaseHitHistoName;
   AIDA::IHistogram1D * triggerPhaseHitHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 10,-1,8);
   _aidaHistoMap.insert(make_pair(tempHistoName, triggerPhaseHitHisto));
-  triggerPhaseHitHisto->setTitle("Trigger Phase of events w/ pixel hit");
+  triggerPhaseHitHisto->setTitle("Trigger Phase of events w/ pixel hit;phase bits; # events w/ pixel hits");
 
   streamlog_out ( MESSAGE5 )  << "end of Booking histograms " << endl;
 }
