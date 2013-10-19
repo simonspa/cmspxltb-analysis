@@ -64,6 +64,7 @@ std::string EUTelConvertCMSPixel::_pulseHeightHistoName        	= "pulseHeight";
 std::string EUTelConvertCMSPixel::_triggerPhaseHistoName        = "triggerPhase";
 std::string EUTelConvertCMSPixel::_triggerPhaseHitHistoName        = "triggerPhaseHit";
 std::string EUTelConvertCMSPixel::_dcolMonitorHistoName        = "dcolMonitor";
+std::string EUTelConvertCMSPixel::_dcolMonitorEvtHistoName        = "dcolMonitorEvt";
 #endif
 
 
@@ -327,7 +328,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	  streamlog_out(DEBUG0) << (*sparsePixel.get()) << endl;
 	  
 	  // Fill histogramms if necessary:
-	  if(_fillHistos) fillHistos((*it).col, (*it).row, (*it).raw, (*it).roc, evt_timing.timestamp);
+	  if(_fillHistos) fillHistos((*it).col, (*it).row, (*it).raw, (*it).roc, evt_timing.timestamp, eventNumber);
 
 	  sparseData.addSparsePixel(sparsePixel.get());
 	  
@@ -391,7 +392,7 @@ void EUTelConvertCMSPixel::end () {
 
 
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
-void EUTelConvertCMSPixel::fillHistos (int xCoord, int yCoord, int value, int sensorID, int64_t timestamp) {
+void EUTelConvertCMSPixel::fillHistos (int xCoord, int yCoord, int value, int sensorID, int64_t timestamp, int evt) {
 
   string tempHistoName;
 			
@@ -405,6 +406,9 @@ void EUTelConvertCMSPixel::fillHistos (int xCoord, int yCoord, int value, int se
   double time = timestamp/1E4;
   tempHistoName = _dcolMonitorHistoName + "_d" + to_string( sensorID );
   (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double>(time), static_cast<double >(xCoord), 1.);
+
+  tempHistoName = _dcolMonitorEvtHistoName + "_d" + to_string( sensorID );
+  (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double>(evt), static_cast<double >(xCoord), 1.);
 
 }
 
@@ -438,6 +442,12 @@ void EUTelConvertCMSPixel::bookHistos() {
     AIDA::IHistogram2D * dcolMonitorHisto = AIDAProcessor::histogramFactory(this)->createHistogram2D( (basePath + tempHistoName).c_str(), 1001, 0, 1000, 52, 0, 51);
     _aidaHistoMap.insert(make_pair(tempHistoName, dcolMonitorHisto));
     dcolMonitorHisto->setTitle(dcolMonitorTitle.c_str());
+
+    string dcolMonitorEvtTitle = "DCOL hits over event #, ROC" + to_string( iDetector ) + ";event # / 100;column ID;hits per 100 events";
+    tempHistoName = _dcolMonitorEvtHistoName + "_d" + to_string( iDetector );
+    AIDA::IHistogram2D * dcolMonitorEvtHisto = AIDAProcessor::histogramFactory(this)->createHistogram2D( (basePath + tempHistoName).c_str(), 101, 0, 10000, 52, 0, 51);
+    _aidaHistoMap.insert(make_pair(tempHistoName, dcolMonitorEvtHisto));
+    dcolMonitorEvtHisto->setTitle(dcolMonitorEvtTitle.c_str());
 				
   }
 
