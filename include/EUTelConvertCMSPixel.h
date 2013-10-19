@@ -175,6 +175,9 @@ namespace eutelescope
 	    //! Run number string
 	    std::string _srunNumber;
 
+	    //! Timestamp of the first event recorded
+	    int64_t timestamp_event1;
+
 	    //! Run number
             int _runNumber;
 

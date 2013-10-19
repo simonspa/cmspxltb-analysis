@@ -126,6 +126,7 @@ void EUTelConvertCMSPixel::init () {
   _runNumber = atoi(_srunNumber.c_str());
   _isFirstEvent = true;
   eventNumber = 0;
+  timestamp_event1 = 0;
     
   if(_haveTBM) flags += FLAG_HAVETBM;
   if(_useIPBus) flags += FLAG_16BITS_PER_WORD;
@@ -262,6 +263,9 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 
       // Fill the trigger phase histogram for all events, even empty ones:
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHistoName]))->fill((int)evt_timing.trigger_phase);
+
+      // Get timestamp from first event:
+      if(timestamp_event1 == 0) timestamp_event1 = evt_timing.timestamp;
 
       if(status <= DEC_ERROR_NO_MORE_DATA) {
 	streamlog_out (ERROR) << "Decoder returned error " << status << std::endl;
@@ -403,7 +407,7 @@ void EUTelConvertCMSPixel::fillHistos (int xCoord, int yCoord, int value, int se
   (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[tempHistoName]))->fill(value);
 
   // RAL IPBus boards report 1us ticks as timestamp. Here we display 10 seconds;
-  double time = timestamp/1E4;
+  double time = (timestamp - timestamp_event1)/1E4;
   tempHistoName = _dcolMonitorHistoName + "_d" + to_string( sensorID );
   (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double>(time), static_cast<double >(xCoord), 1.);
 
