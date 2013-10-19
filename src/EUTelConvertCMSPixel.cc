@@ -302,7 +302,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       std::vector<pixel>::const_iterator it = event_data.begin();
         
       // Now loop over all ROC chips to be read out:
-      for(int16_t iROC = 0; iROC < _noOfROC; iROC++) {
+      for(uint16_t iROC = 0; iROC < _noOfROC; iROC++) {
 	//      while(it != event_data.end()) {
 
 	//streamlog_out(DEBUG5) << "Processing ROC " << (*it).roc << std::endl;
