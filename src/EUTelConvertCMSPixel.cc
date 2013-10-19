@@ -258,7 +258,10 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 
       // Read next event from file, containing all ROCs / pixels for one trigger:
       status = readout->get_event(&event_data,evt_timing);
-        
+
+      // Fill the trigger phase histogram for all events, even empty ones:
+      (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHistoName]))->fill((int)evt_timing.trigger_phase);
+
       if(status <= DEC_ERROR_NO_MORE_DATA) {
 	streamlog_out (ERROR) << "Decoder returned error " << status << std::endl;
 	// We didn't write single event - it was just impossible to open/read the data file:
@@ -291,8 +294,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       LCCollectionVec * sparseDataCollection = new LCCollectionVec(LCIO::TRACKERDATA);
 
 
-      // Fill the trigger phase histograms:
-      (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHistoName]))->fill((int)evt_timing.trigger_phase);
+      // Fill the trigger phase histograms of events containing a hit:
       if(!event_data.empty()) (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHitHistoName]))->fill((int)evt_timing.trigger_phase);
 
       // Initialize iterator ROC counter:
