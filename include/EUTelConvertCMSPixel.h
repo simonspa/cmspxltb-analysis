@@ -58,8 +58,6 @@ namespace eutelescope
    * @param addressLevelsFile is the file which contains the address level binning for
    * TBM and ROCs. This parameter is only needed for analog ROCs.
    * @param debugDecoder sets the verbosity level of the raw data decoder class.
-   * @param eventSelection allows to set a selection criterion for decoded events. This
-   * can be used to e.g. discard all events which contain readout errors.
    * @param 
    * @param haveTBMheaders switch between data streams recorded with TBM or TBM emulation and
    * streams without any TBM data.
@@ -149,10 +147,12 @@ namespace eutelescope
 	    // FIXME probably move to protected?
 	    static std::string _triggerPhaseHistoName;
 	    static std::string _triggerPhaseHitHistoName;
+	    static std::string _triggerPhaseHitCutHistoName;
 	    static std::string _dcolMonitorHistoName;
 	    static std::string _dcolMonitorEvtHistoName;
 	    //! Histogram name of the hit map
 	    static std::string _hitMapHistoName;
+	    static std::string _hitMapCutHistoName;
 	    //! Histogram name of the pulse height distribution
             static std::string _pulseHeightHistoName;
 #endif            
@@ -196,9 +196,8 @@ namespace eutelescope
 	    //! Reordering of telescope planes w.r.t. readout order
             IntVec _shufflePlanes;
 
-	    //! Event selection criterion
-            int _event_selection;
-	    
+            IntVec _cutHitmap;
+
 	    //! TBM data stream enabled
             bool _haveTBM;
 

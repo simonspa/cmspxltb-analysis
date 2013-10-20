@@ -60,9 +60,11 @@ using namespace eutelescope;
 
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
 std::string EUTelConvertCMSPixel::_hitMapHistoName              = "hitMap";
+std::string EUTelConvertCMSPixel::_hitMapCutHistoName              = "hitMapCut";
 std::string EUTelConvertCMSPixel::_pulseHeightHistoName        	= "pulseHeight";
 std::string EUTelConvertCMSPixel::_triggerPhaseHistoName        = "triggerPhase";
 std::string EUTelConvertCMSPixel::_triggerPhaseHitHistoName        = "triggerPhaseHit";
+std::string EUTelConvertCMSPixel::_triggerPhaseHitCutHistoName        = "triggerPhaseHitCut";
 std::string EUTelConvertCMSPixel::_dcolMonitorHistoName        = "dcolMonitor";
 std::string EUTelConvertCMSPixel::_dcolMonitorEvtHistoName        = "dcolMonitorEvt";
 #endif
@@ -102,9 +104,17 @@ EUTelConvertCMSPixel::EUTelConvertCMSPixel ():DataSourceProcessor  ("EUTelConver
   
   registerOptionalParameter ("shufflePlanes", "int vector to hold the telescope plane IDs in the order in which they get the readout token.",
 			     _shufflePlanes, std_planes);
-                              
-  //  registerOptionalParameter("eventSelection","Select the events to process: 0 - all, 1 - only with correct No. of ROC headers, 2 - only with corr. ROC headers and without bit errors in them.", _event_selection, static_cast< int > ( 0 ) );
 
+  IntVec std_cut;
+    std_cut.push_back(0);
+    std_cut.push_back(0);
+    std_cut.push_back(51);
+    std_cut.push_back(0);
+    std_cut.push_back(79);
+
+  registerOptionalParameter ("cutHitmap", "Gives the possibilty to cut our a rectangle from the hitmap and evaluate the trigger phase only for events with pixel hits in this region. Format is: ROC COL_MIN COL_MAX ROW_MIN ROW_MAX. Example: 5 34 52 33 54 gives a rectange on ROC5 between 34 <= x <= 52; 33 <= y <= 54.",
+			     _cutHitmap, std_cut);
+                              
   registerOptionalParameter ("haveTBMheaders", "Switch TBM mode on and off. This gives the possibility to read data without real or emulated TBM headers as seen from soem testboard FPGAs. TRUE will look for TBM headers and trailers.",
 			   _haveTBM, static_cast < bool >(true));
 
@@ -301,6 +311,8 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 
       // Fill the trigger phase histograms of events containing a hit:
       if(!event_data.empty()) (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHitHistoName]))->fill((int)evt_timing.trigger_phase);
+      // Initialize bool to write trigger phase for events within the cut boundaries:
+      bool cut_done = false;
 
       // Initialize iterator ROC counter:
       std::vector<pixel>::const_iterator it = event_data.begin();
@@ -333,6 +345,19 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	  
 	  // Fill histogramms if necessary:
 	  if(_fillHistos) fillHistos((*it).col, (*it).row, (*it).raw, (*it).roc, evt_timing.timestamp, eventNumber);
+
+	  // Fill the trigger phase histogram (hit/cut) if we have pixel hits within the cut boundaries:
+	  if((*it).roc == _cutHitmap[0] 
+	     && (*it).col >= _cutHitmap[1] && (*it).col <= _cutHitmap[2]
+	     && (*it).row >= _cutHitmap[3] && (*it).row <= _cutHitmap[4]) {
+	      string tempHistoName = _hitMapCutHistoName + "_d" + to_string((*it).roc);
+	      (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double >((*it).col), static_cast<double >((*it).row), 1.);
+
+	      if(!cut_done) {
+		(dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHitCutHistoName]))->fill((int)evt_timing.trigger_phase);
+		cut_done = true;
+	      }
+	  }
 
 	  sparseData.addSparsePixel(sparsePixel.get());
 	  
@@ -435,6 +460,12 @@ void EUTelConvertCMSPixel::bookHistos() {
     _aidaHistoMap.insert(make_pair(tempHistoName, hitMapHisto));
     hitMapHisto->setTitle("Hit map;pixels X;pixels Y");
 
+    tempHistoName = _hitMapCutHistoName + "_d" + to_string( iDetector );
+    AIDA::IHistogram2D * hitMapCutHisto =
+      AIDAProcessor::histogramFactory(this)->createHistogram2D( (basePath + tempHistoName).c_str(), _noOfXPixel, 0, _noOfXPixel, _noOfYPixel, 0, _noOfYPixel);
+    _aidaHistoMap.insert(make_pair(tempHistoName, hitMapCutHisto));
+    hitMapCutHisto->setTitle("Hit map (cut on pixels at scintillator position);pixels X;pixels Y");
+
     string pulseHeightTitle = "pulse height ROC" + to_string( iDetector ) + ";ADC counts;# events";
     tempHistoName = _pulseHeightHistoName + "_d" + to_string( iDetector );
     AIDA::IHistogram1D * pulseHeightHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D( (basePath + tempHistoName).c_str(), 525,-1050,1050);
@@ -464,6 +495,11 @@ void EUTelConvertCMSPixel::bookHistos() {
   AIDA::IHistogram1D * triggerPhaseHitHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 10,-1,8);
   _aidaHistoMap.insert(make_pair(tempHistoName, triggerPhaseHitHisto));
   triggerPhaseHitHisto->setTitle("Trigger Phase of events w/ pixel hit;phase bits; # events w/ pixel hits");
+
+  tempHistoName = _triggerPhaseHitCutHistoName;
+  AIDA::IHistogram1D * triggerPhaseHitCutHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 10,-1,8);
+  _aidaHistoMap.insert(make_pair(tempHistoName, triggerPhaseHitCutHisto));
+  triggerPhaseHitCutHisto->setTitle("Trigger Phase of events w/ pixel hit at the scintillator position;phase bits; # events w/ pixel hits");
 
   streamlog_out ( MESSAGE5 )  << "end of Booking histograms " << endl;
 }
