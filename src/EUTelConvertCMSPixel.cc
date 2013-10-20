@@ -60,6 +60,7 @@ using namespace eutelescope;
 
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
 std::string EUTelConvertCMSPixel::_hitMapHistoName              = "hitMap";
+std::string EUTelConvertCMSPixel::_hitMapTrigHistoName              = "hitMapTrig";
 std::string EUTelConvertCMSPixel::_hitMapCutHistoName              = "hitMapCut";
 std::string EUTelConvertCMSPixel::_pulseHeightHistoName        	= "pulseHeight";
 std::string EUTelConvertCMSPixel::_triggerPhaseHistoName        = "triggerPhase";
@@ -344,7 +345,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	  streamlog_out(DEBUG0) << (*sparsePixel.get()) << endl;
 	  
 	  // Fill histogramms if necessary:
-	  if(_fillHistos) fillHistos((*it).col, (*it).row, (*it).raw, (*it).roc, evt_timing.timestamp, eventNumber);
+	  if(_fillHistos) fillHistos((*it).col, (*it).row, (*it).raw, (*it).roc, evt_timing.timestamp, evt_timing.trigger_phase, eventNumber);
 
 	  // Fill the trigger phase histogram (hit/cut) if we have pixel hits within the cut boundaries:
 	  if((*it).roc == _cutHitmap[0] 
@@ -421,11 +422,14 @@ void EUTelConvertCMSPixel::end () {
 
 
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
-void EUTelConvertCMSPixel::fillHistos (int xCoord, int yCoord, int value, int sensorID, int64_t timestamp, int evt) {
+void EUTelConvertCMSPixel::fillHistos (int xCoord, int yCoord, int value, int sensorID, int64_t timestamp, int triggerphase, int evt) {
 
   string tempHistoName;
 			
   tempHistoName = _hitMapHistoName + "_d" + to_string( sensorID );
+  (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double >(xCoord), static_cast<double >(yCoord), 1.);
+
+  tempHistoName = _hitMapTrigHistoName + "_d" + to_string( sensorID ) + "_trph" + to_string( triggerphase );
   (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double >(xCoord), static_cast<double >(yCoord), 1.);
 			
   tempHistoName = _pulseHeightHistoName + "_d" + to_string( sensorID );
@@ -459,6 +463,15 @@ void EUTelConvertCMSPixel::bookHistos() {
       AIDAProcessor::histogramFactory(this)->createHistogram2D( (basePath + tempHistoName).c_str(), _noOfXPixel, 0, _noOfXPixel, _noOfYPixel, 0, _noOfYPixel);
     _aidaHistoMap.insert(make_pair(tempHistoName, hitMapHisto));
     hitMapHisto->setTitle("Hit map;pixels X;pixels Y");
+
+    for(unsigned int iTriggerPhase = 0; iTriggerPhase < 8; iTriggerPhase++) {
+      tempHistoName = _hitMapTrigHistoName + "_d" + to_string( iDetector ) + "_trph" + to_string( iTriggerPhase );
+      AIDA::IHistogram2D * hitMapTrigHisto =
+	AIDAProcessor::histogramFactory(this)->createHistogram2D( (basePath + tempHistoName).c_str(), _noOfXPixel, 0, _noOfXPixel, _noOfYPixel, 0, _noOfYPixel);
+      _aidaHistoMap.insert(make_pair(tempHistoName, hitMapTrigHisto));
+      string temptitle = "Hit map for trigger phase " + to_string( iTriggerPhase ) + "; pixels X; pixels Y";
+      hitMapTrigHisto->setTitle(temptitle);
+    }
 
     tempHistoName = _hitMapCutHistoName + "_d" + to_string( iDetector );
     AIDA::IHistogram2D * hitMapCutHisto =

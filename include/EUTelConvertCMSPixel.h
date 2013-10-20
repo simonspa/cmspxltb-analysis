@@ -142,7 +142,7 @@ namespace eutelescope
 	     *  @param xCoord The current sensor ID
 	     */
             void fillHistos (int xCoord, int yCoord, int value, int sensorID,
-			     int64_t timestamp, int evt);
+			     int64_t timestamp, int triggerphase, int evt);
 
 	    // FIXME probably move to protected?
 	    static std::string _triggerPhaseHistoName;
@@ -152,6 +152,7 @@ namespace eutelescope
 	    static std::string _dcolMonitorEvtHistoName;
 	    //! Histogram name of the hit map
 	    static std::string _hitMapHistoName;
+	    static std::string _hitMapTrigHistoName;
 	    static std::string _hitMapCutHistoName;
 	    //! Histogram name of the pulse height distribution
             static std::string _pulseHeightHistoName;
