@@ -493,7 +493,7 @@ void EUTelConvertCMSPixel::bookHistos() {
 
     string dcolMonitorEvtTitle = "DCOL hits over event #, ROC" + to_string( iDetector ) + ";event # / 100;column ID;hits per 100 events";
     tempHistoName = _dcolMonitorEvtHistoName + "_d" + to_string( iDetector );
-    AIDA::IHistogram2D * dcolMonitorEvtHisto = AIDAProcessor::histogramFactory(this)->createHistogram2D( (basePath + tempHistoName).c_str(), 101, 0, 10000, 52, 0, 51);
+    AIDA::IHistogram2D * dcolMonitorEvtHisto = AIDAProcessor::histogramFactory(this)->createHistogram2D( (basePath + tempHistoName).c_str(), 5001, 0, 500000, 52, 0, 51);
     _aidaHistoMap.insert(make_pair(tempHistoName, dcolMonitorEvtHisto));
     dcolMonitorEvtHisto->setTitle(dcolMonitorEvtTitle.c_str());
 				
