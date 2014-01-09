@@ -1,0 +1,21 @@
+Get to your working dir and clone the github repo:
+$ git clone https://github.com/simonspa/cmspxltb-analysis.git .
+
+Get the build_env.sh from here:
+$ cp /afs/cern.ch/work/s/simonspa/public/eutelescope.git .
+and modify the $MYPATH variable to match your actual installation path
+
+Create the build directory:
+$ mkdir build && cd build
+Source some stuff for cmake execution:
+$ source /afs/cern.ch/work/x/xshi/public/ILCSOFT/v01-17-03/init_ilcsoft.sh
+$ source
+/afs/cern.ch/work/x/xshi/public/ILCSOFT/v01-17-03/ILCSoft.cmake.env.sh
+Run Cmake and compile:
+$ cmake ..
+$ make install -j
+$ cd ..
+
+Source your personal environment:
+$ source build_env.sh
+...and run.
