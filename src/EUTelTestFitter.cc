@@ -876,6 +876,8 @@ void EUTelTestFitter::processRunHeader( LCRunHeader* runHeader) {
 
 void EUTelTestFitter::processEvent( LCEvent * event ) {
 
+  streamlog_out( DEBUG5 ) << " processing event " << event->getEventNumber() << endl;
+
   _nEvt ++ ;
 
   EUTelEventImpl * euEvent = static_cast<EUTelEventImpl*> ( event );
@@ -1089,7 +1091,7 @@ void EUTelTestFitter::processEvent( LCEvent * event ) {
   // Loop over hits
 
   int nGoodHit = 0;
-
+  streamlog_out ( DEBUG5 ) << " nHit  " << nHit <<endl;
   for(int ihit=0; ihit< nHit ; ihit++) 
   {
     TrackerHit        * meshit = dynamic_cast<TrackerHit*>( col->getElementAt(ihit) ) ;
@@ -1120,7 +1122,7 @@ void EUTelTestFitter::processEvent( LCEvent * event ) {
     // We have to find Plane ID of the hit
     // by looking at the Z position
     //
-    double distMin =  1.;
+    double distMin =  5.;
     hitPlane[ihit] = -1 ;
 
     for(int ipl=0;ipl<_nTelPlanes;ipl++)  
