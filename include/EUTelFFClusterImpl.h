@@ -183,6 +183,7 @@ namespace eutelescope {
 	int rhs = 13;
 	lcio::long64 mask = (0xFFF << rhs);
 	xSeed = static_cast<int>  ( ( cell0 & mask ) >> rhs ) ;
+	xSeed = xSeed >> 4;
       }
 
       { 
@@ -195,6 +196,7 @@ namespace eutelescope {
 	lcio::long64 mask1 = 0x1F;
 
 	ySeed = static_cast<int> (( (cell0 & mask0) >> rhs0 ) | ( (cell1 & mask1)  << lhs1 ));
+	ySeed = ySeed >> 4;
       }
     }
 
@@ -211,7 +213,7 @@ namespace eutelescope {
       
       { 
 	// first parameter block
-	int rhs = 5;
+	int rhs = 5+4;
 	lcio::long64 mask = ( 0x1F << rhs );
 	
 	xSize = static_cast<int> ( ( cell1 & mask ) >> rhs );
@@ -219,7 +221,7 @@ namespace eutelescope {
 
       {
 	// second parameter block
-	int rhs = 10;
+	int rhs = 10+4;
 	lcio::long64 mask = ( 0x1F << rhs );
 	
 	ySize = static_cast<int> ( ( cell1 & mask ) >> rhs );
