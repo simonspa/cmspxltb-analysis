@@ -217,7 +217,7 @@ CMSPixelFileDecoder::CMSPixelFileDecoder(const char *FileName, unsigned int rocs
   // Open the requested file stream:
   LOG(logDEBUG1) << "Open data file...";
   if((mtbStream = fopen(FileName,"r")) == NULL)
-    LOG(logERROR) << " ...could not open file!";
+     LOG(logERROR) << " ...could not open file! " << FileName;
   else
     LOG(logDEBUG1) << " ...successfully.";
 }
