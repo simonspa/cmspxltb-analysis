@@ -165,6 +165,9 @@ namespace eutelescope
 	    //! Address levels file name for analog PSI46 chips
             std::string _levelsFile;
 
+	    //! Decoding statistics file name
+            std::string _statisticsFile;
+
 	    //! Output collection name
             std::string _sparseDataCollectionName;
 

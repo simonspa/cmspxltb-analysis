@@ -83,6 +83,9 @@ EUTelConvertCMSPixel::EUTelConvertCMSPixel ():DataSourceProcessor  ("EUTelConver
   registerProcessorParameter ("addressLevelsFile", "Address levels calibration file for the TBM and ROC address encoding levels.",
                               _levelsFile, std::string ("addressParameters.dat"));
 
+  registerProcessorParameter ("statisticsFile", "File for decoding statistics ouput (human-readable text format). Not written of left empty",
+                              _statisticsFile, std::string (""));
+
   registerProcessorParameter ("runNumber", "RunNumber",
                               _srunNumber, std::string("000001"));
 
@@ -405,13 +408,21 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
   ProcessorMgr::instance ()->processEvent (static_cast<LCEventImpl*> (evt));
   streamlog_out ( MESSAGE5 ) << " ---------------------------------------------------------" << endl;    
   streamlog_out ( MESSAGE5 ) << "  Write EORE as event " << evt->getEventNumber() << endl;
+
+  // Write the decoder statistics into a file:
+  if(_statisticsFile.compare("") != 0) {
+    streamlog_out(MESSAGE5) << "Writing decoding statistics to " << _statisticsFile << endl;
+    ofstream statfile(_statisticsFile.c_str(),std::ofstream::out);
+    statfile << readout->statistics.get() << endl;
+    statfile.close();
+  }
         
   // Print the readout statistics, invoked by the destructor:
   streamlog_out ( MESSAGE5 ) << " ---------------------------------------------------------" << endl;    
   delete readout;
-  streamlog_out ( MESSAGE5 ) << " ---------------------------------------------------------" << endl;    
+  streamlog_out ( MESSAGE5 ) << " ---------------------------------------------------------" << endl;
 
-  // Delete the EORE event:    
+  // Delete the EORE event:
   delete evt;
 }
 
