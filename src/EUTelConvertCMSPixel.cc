@@ -66,8 +66,11 @@ std::string EUTelConvertCMSPixel::_pulseHeightHistoName        	= "pulseHeight";
 std::string EUTelConvertCMSPixel::_triggerPhaseHistoName        = "triggerPhase";
 std::string EUTelConvertCMSPixel::_triggerPhaseHitHistoName        = "triggerPhaseHit";
 std::string EUTelConvertCMSPixel::_triggerPhaseHitCutHistoName        = "triggerPhaseHitCut";
-std::string EUTelConvertCMSPixel::_dcolMonitorHistoName        = "dcolMonitor";
-std::string EUTelConvertCMSPixel::_dcolMonitorEvtHistoName        = "dcolMonitorEvt";
+std::string EUTelConvertCMSPixel::_dataPhaseHistoName           = "dataPhase";
+std::string EUTelConvertCMSPixel::_dataPhaseHitHistoName        = "dataPhaseHit";
+std::string EUTelConvertCMSPixel::_dataPhaseHitCutHistoName     = "dataPhaseHitCut";
+std::string EUTelConvertCMSPixel::_dcolMonitorHistoName         = "dcolMonitor";
+std::string EUTelConvertCMSPixel::_dcolMonitorEvtHistoName      = "dcolMonitorEvt";
 #endif
 
 
@@ -278,6 +281,8 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       // Fill the trigger phase histogram for all events, even empty ones:
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHistoName]))->fill((int)evt_timing.trigger_phase);
 
+      (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_dataPhaseHistoName]))->fill((int)evt_timing.data_phase);
+
       // Get timestamp from first event:
       if(timestamp_event1 == 0) timestamp_event1 = evt_timing.timestamp;
 
@@ -315,6 +320,9 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 
       // Fill the trigger phase histograms of events containing a hit:
       if(!event_data.empty()) (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHitHistoName]))->fill((int)evt_timing.trigger_phase);
+
+      if(!event_data.empty()) (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_dataPhaseHitHistoName]))->fill((int)evt_timing.data_phase);
+
       // Initialize bool to write trigger phase for events within the cut boundaries:
       bool cut_done = false;
 
@@ -359,6 +367,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 
 	      if(!cut_done) {
 		(dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHitCutHistoName]))->fill((int)evt_timing.trigger_phase);
+		(dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_dataPhaseHitCutHistoName]))->fill((int)evt_timing.data_phase);
 		cut_done = true;
 	      }
 	  }
@@ -524,6 +533,22 @@ void EUTelConvertCMSPixel::bookHistos() {
   AIDA::IHistogram1D * triggerPhaseHitCutHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 10,-1,8);
   _aidaHistoMap.insert(make_pair(tempHistoName, triggerPhaseHitCutHisto));
   triggerPhaseHitCutHisto->setTitle("Trigger Phase of events w/ pixel hit at the scintillator position;phase bits; # events w/ pixel hits");
+
+  tempHistoName = _dataPhaseHistoName;
+  AIDA::IHistogram1D * dataPhaseHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 10,-1,8);
+  _aidaHistoMap.insert(make_pair(tempHistoName, dataPhaseHisto));
+  dataPhaseHisto->setTitle("Data Phase;phase bits; # events");
+
+  tempHistoName = _dataPhaseHitHistoName;
+  AIDA::IHistogram1D * dataPhaseHitHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 10,-1,8);
+  _aidaHistoMap.insert(make_pair(tempHistoName, dataPhaseHitHisto));
+  dataPhaseHitHisto->setTitle("Data Phase of events w/ pixel hit;phase bits; # events w/ pixel hits");
+
+  tempHistoName = _dataPhaseHitCutHistoName;
+  AIDA::IHistogram1D * dataPhaseHitCutHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 10,-1,8);
+  _aidaHistoMap.insert(make_pair(tempHistoName, dataPhaseHitCutHisto));
+  dataPhaseHitCutHisto->setTitle("Data Phase of events w/ pixel hit at the scintillator position;phase bits; # events w/ pixel hits");
+
 
   streamlog_out ( MESSAGE5 )  << "end of Booking histograms " << endl;
 }

@@ -148,6 +148,9 @@ namespace eutelescope
 	    static std::string _triggerPhaseHistoName;
 	    static std::string _triggerPhaseHitHistoName;
 	    static std::string _triggerPhaseHitCutHistoName;
+	    static std::string _dataPhaseHistoName;
+	    static std::string _dataPhaseHitHistoName;
+	    static std::string _dataPhaseHitCutHistoName;
 	    static std::string _dcolMonitorHistoName;
 	    static std::string _dcolMonitorEvtHistoName;
 	    //! Histogram name of the hit map
