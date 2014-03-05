@@ -64,6 +64,7 @@ std::string EUTelConvertCMSPixel::_hitMapTrigHistoName              = "hitMapTri
 std::string EUTelConvertCMSPixel::_hitMapCutHistoName              = "hitMapCut";
 std::string EUTelConvertCMSPixel::_pulseHeightHistoName        	= "pulseHeight";
 std::string EUTelConvertCMSPixel::_triggerPhaseHistoName        = "triggerPhase";
+std::string EUTelConvertCMSPixel::_triggerPhasePixelsHistoName  =  "triggerPhasePixels";
 std::string EUTelConvertCMSPixel::_triggerPhaseHitHistoName        = "triggerPhaseHit";
 std::string EUTelConvertCMSPixel::_triggerPhaseHitCutHistoName        = "triggerPhaseHitCut";
 std::string EUTelConvertCMSPixel::_dataPhaseHistoName           = "dataPhase";
@@ -280,7 +281,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 
       // Fill the trigger phase histogram for all events, even empty ones:
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHistoName]))->fill((int)evt_timing.trigger_phase);
-
+      (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHistoName]))->fill((int)evt_timing.trigger_phase);
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_dataPhaseHistoName]))->fill((int)evt_timing.data_phase);
 
       // Get timestamp from first event:
@@ -463,6 +464,8 @@ void EUTelConvertCMSPixel::fillHistos (int xCoord, int yCoord, int value, int se
   tempHistoName = _dcolMonitorEvtHistoName + "_d" + to_string( sensorID );
   (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double>(evt), static_cast<double >(xCoord), 1.);
 
+  tempHistoName = _triggerPhasePixelsHistoName + "_d" + to_string( sensorID );
+  (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<int>(triggerphase));
 }
 
 
@@ -516,7 +519,12 @@ void EUTelConvertCMSPixel::bookHistos() {
     AIDA::IHistogram2D * dcolMonitorEvtHisto = AIDAProcessor::histogramFactory(this)->createHistogram2D( (basePath + tempHistoName).c_str(), 5000, 0, 500000, 52, -0.5, 51.5);
     _aidaHistoMap.insert(make_pair(tempHistoName, dcolMonitorEvtHisto));
     dcolMonitorEvtHisto->setTitle(dcolMonitorEvtTitle.c_str());
-				
+
+    std::string triggerPhasePixelsHistoTitle = "Trigger Phase over pixel hits, ROC " + to_string( iDetector ) + ";phase bits; # pixel hits";
+    tempHistoName = _triggerPhasePixelsHistoName + "_d" + to_string( iDetector );
+    AIDA::IHistogram1D * triggerPhasePixelsHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D( (basePath + tempHistoName).c_str(), 10,-1,8);
+    _aidaHistoMap.insert(make_pair(tempHistoName, triggerPhasePixelsHisto));
+    triggerPhasePixelsHisto->setTitle(triggerPhasePixelsHistoTitle.c_str());
   }
 
   tempHistoName = _triggerPhaseHistoName;

@@ -146,6 +146,7 @@ namespace eutelescope
 
 	    // FIXME probably move to protected?
 	    static std::string _triggerPhaseHistoName;
+	    static std::string _triggerPhasePixelsHistoName;
 	    static std::string _triggerPhaseHitHistoName;
 	    static std::string _triggerPhaseHitCutHistoName;
 	    static std::string _dataPhaseHistoName;
