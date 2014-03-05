@@ -1,10 +1,13 @@
-// Version: $Id: CMSPixelDecoder.cc 2371 2013-02-14 08:49:35Z spanns $
-/*========================================================================*/
-/*          CMSPixel Decoder v3.1                                         */
-/*          Author: Simon Spannagel (s.spannagel@cern.ch)                 */
-/*          Created       23 feb 2012                                     */
-/*          Last modified 29 apr 2013                                     */
-/*========================================================================*/
+/*==========================================================================*/
+/*          CMSPixel Decoder                                                */
+/*          Questions: s.spannagel@cern.ch                                  */
+/*          Source: https://github.com/simonspa/CMSPixelDecoder             */
+/*                                                                          */
+/* CMSPixel Decoder is free software: you can redistribute it and/or modify */
+/* it under the terms of the GNU General Public License as published by     */
+/* the Free Software Foundation, either version 3 of the License, or        */
+/* (at your option) any later version.                                      */
+/*==========================================================================*/
 
 #include "CMSPixelDecoder.h"
 
@@ -21,10 +24,16 @@
 
 using namespace CMSPixel;
 
-void CMSPixelStatistics::init() {
+void CMSPixelStatistics::init(unsigned int nrocs) {
   head_data = head_trigger = 0;
-  evt_valid = evt_empty = evt_invalid = 0;
-  pixels_valid = pixels_invalid = 0;
+  evt_valid = evt_empty = evt_invalid = ipbus_invalid = 0;
+  pixels_valid = pixels_valid_zeroph = pixels_invalid = pixels_invalid_eor = 0;
+  rocmap_invalid.clear();
+  rocmap_valid.clear();
+  for(unsigned int i = 0; i < nrocs; i++) { 
+    rocmap_invalid.insert(std::make_pair(i,0));
+    rocmap_valid.insert(std::make_pair(i,0));
+  }
 }
 
 void CMSPixelStatistics::update(CMSPixelStatistics stats) {
@@ -34,24 +43,46 @@ void CMSPixelStatistics::update(CMSPixelStatistics stats) {
   evt_valid += stats.evt_valid;
   evt_empty += stats.evt_empty;
   evt_invalid += stats.evt_invalid;
+  ipbus_invalid += stats.ipbus_invalid;
   pixels_valid += stats.pixels_valid;
+  pixels_valid_zeroph += stats.pixels_valid_zeroph;
   pixels_invalid += stats.pixels_invalid;
+  pixels_invalid_eor += stats.pixels_invalid_eor;
+  for(size_t i = 0; i < rocmap_invalid.size(); i++) { rocmap_invalid[i] += stats.rocmap_invalid[i]; }
+  for(size_t i = 0; i < rocmap_valid.size(); i++) { rocmap_valid[i] += stats.rocmap_valid[i]; }
+
 }
 
 std::string CMSPixelStatistics::get() {
   std::stringstream os;
   os << std::endl;
-  os << "    Data blocks read : " << std::setw(8) << data_blocks << std::endl;
+  os << "    Data blocks read:     " << std::setw(8) << data_blocks << std::endl;
+  os << "    TB Trigger Marker:    " << std::setw(8) << head_trigger << std::endl;
+  os << "    TB Data Marker:       " << std::setw(8) << head_data << std::endl;
+  os << "   -------------------------------" << std::endl;
+  os << "    Events empty:         " << std::setw(8) << evt_empty << std::endl;
+  os << "    Events valid:         " << std::setw(8) << evt_valid << std::endl;
+  os << "    Events invalid:       " << std::setw(8) << evt_invalid << std::endl;
+  os << "    IPBus Evt invalid:    " << std::setw(8) << ipbus_invalid << std::endl;
+  os << "   -------------------------------" << std::endl;
+  os << "    Pixels valid:         " << std::setw(8) << pixels_valid << std::endl;
 
-  os << "    TB Trigger Marker: " << std::setw(8) << head_trigger << std::endl;
-  os << "    TB Data Marker:    " << std::setw(8) << head_data << std::endl;
+  for(size_t i = 0; i < rocmap_valid.size(); i++) { 
+    os << "        on ROC" << std::setw(2) << i << ":         " 
+       << std::setw(8) << rocmap_valid[i] << std::endl;
+  }
 
-  os << "    Events empty:      " << std::setw(8) << evt_empty << std::endl;
-  os << "    Events valid:      " << std::setw(8) << evt_valid << std::endl;
-  os << "    Events invalid:    " << std::setw(8) << evt_invalid << std::endl;
+  os << "      with zero ph:       " << std::setw(8) << pixels_valid_zeroph << std::endl;
+  os << "   -------------------------------" << std::endl;
+  os << "    Pixels invalid:       " << std::setw(8) << pixels_invalid << std::endl;
 
-  os << "    Pixels valid:      " << std::setw(8) << pixels_valid << std::endl;
-  os << "    Pixels invalid:    " << std::setw(8) << pixels_invalid;
+  for(size_t i = 0; i < rocmap_invalid.size(); i++) { 
+    os << "        on ROC" << std::setw(2) << i << ":         " 
+       << std::setw(8) << rocmap_invalid[i] << std::endl;
+  }
+  
+  os << "      End of ROC readout: " << std::setw(8) << pixels_invalid_eor << std::endl;
+  os << "   -------------------------------";
   return os.str();
 }
 
@@ -59,23 +90,9 @@ void CMSPixelStatistics::print() {
   LOG(logSUMMARY) << get();
 }
 
-bool CMSPixelFileDecoderPSI_ATB::process_rawdata(std::vector< uint16_t > * /*data*/)
-{
-  // Currently nothing to do here...
-  LOG(logDEBUG4) << "No need for raw data processing with PSI ATB.";
-  return true;
-}
-
-bool CMSPixelFileDecoderPSI_DTB::process_rawdata(std::vector< uint16_t > * /*data*/) 
-{
-  // Currently nothing to do here...
-  LOG(logDEBUG4) << "No need for raw data processing with PSI DTB.";
-  return true;
-}
-
 bool CMSPixelFileDecoderRAL::process_rawdata(std::vector< uint16_t > * rawdata) {
 
-  // IPBus data format: we need to delete some additional headers from the test board.
+  // IPBus data format definition
   // remove padding to 32bit words at the end of the event by reading the data length.
 
   // IPBus Data Format:
@@ -95,12 +112,13 @@ bool CMSPixelFileDecoderRAL::process_rawdata(std::vector< uint16_t > * rawdata) 
   //
   // NEW Trailer format with 15bytes:
   // 15 byte trailer:
-  // First 13 bytes unchanged.
-  // Byte 14 (d): lower four bits: data phase; upper four bits: trigger phase
-  // Byte 15 (e): lower four bits: event status (good event == 7); upper four bits: reserved
-
-  // FIXME apparently trigger phase is stored in upper four bits of byte 15! (just right before the "good event" marker):
-  // Byte 15: TTT00111 (only using 3bit)
+  // Byte 14: (d) next-to-last
+  //  - bits 0-5: number of stacked triggers while this event was read out
+  //  - bits 6-7: data phase with respect to clock edge (mostly for debugging)
+  // Byte 15: (e) last
+  //  - bits 0-3: event status flags
+  //  - bit 4: 1 of the second CTR pattern was used to generate this event
+  //  - bits 5-7: trigger phase with respect to clock edge
 
   // Catch strange events with corrupted length or so:
   try {
@@ -115,63 +133,85 @@ bool CMSPixelFileDecoderRAL::process_rawdata(std::vector< uint16_t > * rawdata) 
     // Old dataformat has only 14bytes trailer, new format has 15bytes:
     if(ral_flags & FLAG_OLD_RAL_FORMAT) event_length -= 14;
     else event_length -= 15;
-  
-    LOG(logDEBUG4) << "IPBus event length: " << event_length << " bytes.";
+    bool even = (event_length%2 == 0);
 
-    // Read the timestamp from the trailer:
-    uint16_t stamp_pos = (event_length/2) + 8;
+    LOG(logDEBUG4) << "IPBus event length: " << event_length << " bytes (" << (even ? "even" : "odd") << ")";
 
-    uint64_t time2 = rawdata->at(stamp_pos+2);
-    uint64_t time1 = rawdata->at(stamp_pos+1);
-    uint64_t time0 = rawdata->at(stamp_pos);
+    // Read information from event trailer:
+    uint16_t trailer_pos = (event_length/2);
 
-    uint16_t phase;
-    if(ral_flags & FLAG_OLD_RAL_FORMAT) phase = 0;
-    else phase = rawdata->at(stamp_pos+3);
+    uint64_t time2 = rawdata->at(trailer_pos + 10);
+    uint64_t time1 = rawdata->at(trailer_pos + 9);
+    uint64_t time0 = rawdata->at(trailer_pos + 8);
 
-    uint64_t tnumber2 = rawdata->at(stamp_pos-2);
-    uint32_t tnumber1 = rawdata->at(stamp_pos-3);
-    uint32_t tnumber0 = rawdata->at(stamp_pos-4);
+    uint16_t nexttolast, last;
+    if(ral_flags & FLAG_OLD_RAL_FORMAT) { nexttolast = last = 0; }
+    else {
+      nexttolast = rawdata->at(trailer_pos + 10);
+      last = rawdata->at(trailer_pos + 11);
+    }
 
-    if(event_length%2 == 0) {
-      LOG(logDEBUG4) << "IPBUS even event length.";
+    uint64_t trignumber2 = rawdata->at(trailer_pos + 6);
+    uint32_t trignumber1 = rawdata->at(trailer_pos + 5);
+    uint32_t trignumber0 = rawdata->at(trailer_pos + 4);
 
-      cms_t.timestamp = ((time1<<32)&0xff00000000LLU) | 
-	((time1<<16)&0xff000000) | 
-	((time0<<16)&0xff0000) | 
-	((time0)&0xff00) | 
+    uint64_t toknumber2 = rawdata->at(trailer_pos + 8);
+    uint32_t toknumber1 = rawdata->at(trailer_pos + 7);
+    uint32_t toknumber0 = rawdata->at(trailer_pos + 6);
+
+    if(even) { // even event length
+      cms_t.trigger_number = (((trignumber1<<24)&0xff000000) |
+			      ((trignumber1<<8)&0xff0000) |
+			      ((trignumber0<<8)&0xff00) |
+			      ((trignumber0>>8)&0xff));
+
+      cms_t.token_number = (((toknumber1<<24)&0xff000000) |
+			    ((toknumber1<<8)&0xff0000) |
+			    ((toknumber0<<8)&0xff00) |
+			    ((toknumber0>>8)&0xff));
+
+      cms_t.timestamp = ((time1<<32)&0xff00000000LLU) |
+	((time1<<16)&0xff000000) |
+	((time0<<16)&0xff0000) |
+	((time0)&0xff00) |
 	((time2>>8)&0xff);
 
-      cms_t.trigger_number = (((tnumber1<<24)&0xff000000) | 
-			     ((tnumber1<<8)&0xff0000) | 
-			     ((tnumber0<<8)&0xff00) | 
-			     ((tnumber0>>8)&0xff));
-
-      cms_t.trigger_phase = (phase>>13)&0xf;
-
+      cms_t.trigger_phase = (last>>13)&0xf;
+      cms_t.data_phase = (nexttolast>>6)&0xf;
+      cms_t.triggers_stagged = (nexttolast)&0xff;
     }
-    else {
-      cms_t.timestamp = ((time2<<24)&0xff00000000LLU) | 
-	((time1<<24)&0xff000000) | 
-	((time1<<8)&0xff0000) | 
-	((time0<<8)&0xff00) | 
+    else { // odd event length
+      cms_t.trigger_number = (((trignumber2<<32)&0xff000000) |
+			      ((trignumber1<<16)&0xff0000) |
+			      ((trignumber1<<8)&0xff00) |
+			      ((trignumber0)&0xff));
+
+      cms_t.token_number = (((toknumber2<<32)&0xff000000) |
+			    ((toknumber1<<16)&0xff0000) |
+			    ((toknumber1<<8)&0xff00) |
+			    ((toknumber0)&0xff));
+
+      cms_t.timestamp = ((time2<<24)&0xff00000000LLU) |
+	((time1<<24)&0xff000000) |
+	((time1<<8)&0xff0000) |
+	((time0<<8)&0xff00) |
 	((time2)&0xff);
 
-      cms_t.trigger_number = (((tnumber2<<32)&0xff000000) | 
-			      ((tnumber1<<16)&0xff0000) | 
-			     ((tnumber1<<8)&0xff00) | 
-			     ((tnumber0)&0xff));
-
-      cms_t.trigger_phase = (phase>>5)&0xf;
-
+      cms_t.trigger_phase = (last>>5)&0xf;
+      cms_t.data_phase = (last>>14)&0xf;
+      cms_t.triggers_stagged = (last>>8)&0xff;
     }
 
+    // Cut off data not belonging to the fields:
     cms_t.trigger_phase &= 0x07;
-    //  0000:1111 = 0F
-    //  0000:0111 = 07
+    cms_t.data_phase &= 0x03;
+    cms_t.triggers_stagged &= 0x3f;
 
+    // Some debug printout:
     LOG(logDEBUG4) << "IPBus timestamp: " << std::hex << cms_t.timestamp << std::dec << " = " << cms_t.timestamp << "us.";
-    LOG(logDEBUG4) << "IPBus trigger number: " << cms_t.trigger_number;
+    LOG(logDEBUG4) << "IPBus number triggers: " << cms_t.trigger_number << ", tokens: " << cms_t.token_number;
+    LOG(logDEBUG4) << "IPBus triggers stagged: " << static_cast<int>(cms_t.triggers_stagged);
+    LOG(logDEBUG4) << "IPBus phases trigger: " << static_cast<int>(cms_t.trigger_phase) << ", data: " << static_cast<int>(cms_t.data_phase);
 
     // cut first 8 bytes from header:
     rawdata->erase(rawdata->begin(),rawdata->begin()+4);
@@ -181,14 +221,21 @@ bool CMSPixelFileDecoderRAL::process_rawdata(std::vector< uint16_t > * rawdata) 
   }
   catch(...) {
     LOG(logERROR) << "Invalid IPBus event detected.";
-    statistics.evt_invalid++;
+    statistics.ipbus_invalid++;
     return false;
   }
   return true;
 }
 
+CMSPixelStreamDecoderRAL::CMSPixelStreamDecoderRAL(std::vector<uint32_t> * datastream, unsigned int rocs, int flags, uint8_t ROCTYPE) : CMSPixelFileDecoderRAL("", rocs, flags, ROCTYPE) {
+  // Assign the pointer to our input data stream:
+  datablob = datastream;
+  // Set iterator to the beginning:
+  datait = datablob->begin();
+}
+
 CMSPixelFileDecoder::CMSPixelFileDecoder(const char *FileName, unsigned int rocs, int flags, uint8_t ROCTYPE, const char *addressFile)
-  : statistics(), evt(), theROC(0), mtbStream(), cms_t(), addressLevels()
+  : statistics(rocs), evt(), theROC(0), mtbStream(), cms_t(), addressLevels()
 {
 
   LOG(logDEBUG) << "Preparing a file decoder instance...";
@@ -212,29 +259,43 @@ CMSPixelFileDecoder::CMSPixelFileDecoder(const char *FileName, unsigned int rocs
   }
 
   // Initialize the statistics counter:
-  statistics.init();
+  statistics.init(rocs);
 
   // Open the requested file stream:
-  LOG(logDEBUG1) << "Open data file...";
-  if((mtbStream = fopen(FileName,"r")) == NULL)
-     LOG(logERROR) << " ...could not open file! " << FileName;
-  else
+  LOG(logDEBUG1) << "Open data file \"" << std::string(FileName) << "\"...";
+  if((mtbStream = fopen(FileName,"r")) != NULL) {
     LOG(logDEBUG1) << " ...successfully.";
+  }
 }
 
 CMSPixelFileDecoder::~CMSPixelFileDecoder() {
   LOG(logSUMMARY) << statistics.get();
 }
 
+bool CMSPixelFileDecoder::check_data() {
+  if(!mtbStream) return false;
+  else return true;
+}
+
+bool CMSPixelStreamDecoderRAL::check_data() {
+  return true;
+}
+
 int CMSPixelFileDecoder::get_event(std::vector<pixel> * decevt, timing & evt_timing) {
   // Check if stream is open:
-  if(!mtbStream) return DEC_ERROR_INVALID_FILE;
+  if(!check_data()) { return DEC_ERROR_INVALID_FILE; }
+
+  // Clear the data from previous decoding:
+  lastevent_raw.clear();
 
   std::vector < uint16_t > data;
   LOG(logDEBUG) << "STATUS Start chopping file.";
 
   // Cut off the next event from the filestream:
   if(!chop_datastream(&data)) return DEC_ERROR_NO_MORE_DATA;
+
+  // Store the raw data of this event, just in case we want to access it again:
+  lastevent_raw = data;
 
   // Take into account that different testboards write the data differently:
   if(!process_rawdata(&data)) return DEC_ERROR_INVALID_EVENT;
@@ -247,6 +308,25 @@ int CMSPixelFileDecoder::get_event(std::vector<pixel> * decevt, timing & evt_tim
   statistics.update(evt->statistics);
 
   return status;
+}
+
+std::vector<uint16_t> CMSPixelFileDecoder::get_rawdata() {
+  return lastevent_raw;
+}
+
+std::vector<uint16_t> CMSPixelFileDecoderRAL::get_rawdata() {
+
+  std::vector<uint16_t> rawdat;
+  // Re-add the header:
+  for(int i = 0; i < 2; i++) rawdat.push_back(0xFFFF);
+  for(int i = 0; i < 2; i++) rawdat.push_back(0x0000);
+
+  // We need to flip 8bit chars around:
+  for(std::vector<uint16_t>::iterator it = lastevent_raw.begin(); it != lastevent_raw.end(); ++it) {
+    uint16_t word = (((*it) << 8)&0xFF00) | ((*it >> 8)&0x00FF);
+    rawdat.push_back(word);
+  }
+  return rawdat;
 }
 
 bool CMSPixelFileDecoder::readWord(uint16_t &word) {
@@ -266,7 +346,78 @@ bool CMSPixelFileDecoderRAL::readWord(uint16_t &word) {
   return true;
 }
 
-bool CMSPixelFileDecoder::chop_datastream(std::vector< uint16_t > * rawdata) {
+bool CMSPixelStreamDecoderRAL::chop_datastream(std::vector< uint16_t > * rawdata) {
+  rawdata->clear();
+    
+  LOG(logDEBUG1) << "Chopping datastream at IPBus headers...";
+
+  while (!word_is_header(*datait)) {
+    LOG(logDEBUG1) << "STATUS drop: " << std::hex << (*datait) << std::dec;
+    if(datait++ == datablob->end()) return false;
+  }
+
+  LOG(logDEBUG) << "STATUS data header     : " << std::hex << (*datait) << std::dec;
+  statistics.head_data++;
+
+  // read some more words after header:
+  if(datait++ == datablob->end()) return false;
+  if(datait++ == datablob->end()) return false;
+
+  // read the data until the next IPBus header arises:
+  while(datait != datablob->end() && !word_is_header(*datait)){
+    rawdata->push_back(((*datait>>8)&0x00ff) | ((*datait<<8)&0xff00));
+    rawdata->push_back(((*datait>>24)&0x00ff) | ((*datait>>8)&0xff00));
+    datait++;
+  }
+
+  LOG(logDEBUG1) << "Raw data array size: " << rawdata->size() << ", so " << 16*rawdata->size() << " bits.";
+    
+  return true;
+}
+
+bool CMSPixelFileDecoderRAL::chop_datastream(std::vector< uint16_t > * rawdata) {
+
+  uint16_t word;
+  rawdata->clear();
+    
+  LOG(logDEBUG1) << "Chopping datastream at IPBus headers...";
+  if(!readWord(word)) return false;
+
+  while (!word_is_header(word)) {
+    LOG(logDEBUG1) << "STATUS drop: " << std::hex << word << std::dec;
+    if(!readWord(word)) return false;
+  }
+
+  LOG(logDEBUG) << "STATUS data header     : " << std::hex << word << std::dec;
+  statistics.head_data++;
+
+  // read 3 more words after header:
+  for(int i = 1; i < 4; i++) if(!readWord(word)) return false;
+            
+  // read the data until the next MTB header arises:
+  if(!readWord(word)) return false;
+  while( !word_is_header(word) && !feof(mtbStream)){
+    rawdata->push_back(word);
+    if(!readWord(word)) return false;
+  }
+
+  //FIXME For IPBus readout check the next header words, too - they should be header again:
+  if(!readWord(word)) return false;
+  //  if(!word_is_2nd_header(word)) {
+  //  rawdata->push_back(word);
+  //  goto morewords;
+  // }
+  //else LOG(logDEBUG4) << "Double-checked header, was " << std::hex << word << std::dec;
+  
+  LOG(logDEBUG1) << "Raw data array size: " << rawdata->size() << ", so " << 16*rawdata->size() << " bits.";
+
+  // Rewind one word to detect the header correctly later on:
+  fseek(mtbStream , -4 , SEEK_CUR);
+  
+  return true;
+}
+
+bool CMSPixelFileDecoderPSI_ATB::chop_datastream(std::vector< uint16_t > * rawdata) {
 
   uint16_t word;
   rawdata->clear();
@@ -316,19 +467,48 @@ bool CMSPixelFileDecoder::chop_datastream(std::vector< uint16_t > * rawdata) {
     if(!readWord(word)) return false;
   }
 
-  //FIXME For IPBus readout check the next header words, too - they should be header again:
   if(!readWord(word)) return false;
-  //  if(!word_is_2nd_header(word)) {
-  //  rawdata->push_back(word);
-  //  goto morewords;
-  // }
-  //else LOG(logDEBUG4) << "Double-checked header, was " << std::hex << word << std::dec;
-  
   LOG(logDEBUG1) << "Raw data array size: " << rawdata->size() << ", so " << 16*rawdata->size() << " bits.";
     
   // Rewind one word to detect the header correctly later on:
   fseek(mtbStream , -4 , SEEK_CUR);
   
+  return true;
+}
+
+bool CMSPixelFileDecoderPSI_DTB::chop_datastream(std::vector< uint16_t > * rawdata) {
+
+  uint16_t word;
+  rawdata->clear();
+    
+  LOG(logDEBUG1) << "Chopping datastream from DTB...";
+  if(!readWord(word)) return false;
+
+  while (!word_is_data(word)) {
+    // If header is detected read more words:
+    LOG(logDEBUG1) << "STATUS drop: " << std::hex << word << std::dec;
+    if(!readWord(word)) return false;
+  }
+    
+  LOG(logDEBUG) << "STATUS data header     : " << std::hex << word << std::dec;
+  statistics.head_data++;
+  
+  // Store the first header word:
+  rawdata->push_back(word);
+            
+  // read the data until the next MTB header arises:
+  // morewords:
+  if(!readWord(word)) return false;
+  while( !word_is_data(word) && !feof(mtbStream)){
+    rawdata->push_back(word);
+    if(!readWord(word)) return false;
+  }
+
+  // Store the last data word:
+  rawdata->push_back(word);
+
+  LOG(logDEBUG1) << "Raw data array size: " << rawdata->size() << ", so " << 16*rawdata->size() << " bits.";
+    
   return true;
 }
 
@@ -436,7 +616,7 @@ std::string CMSPixelFileDecoder::print_addresslevels(levelset addLevels) {
 
 
 CMSPixelEventDecoder::CMSPixelEventDecoder(unsigned int rocs, int flags, uint8_t ROCTYPE)
-  : statistics(), L_HEADER(0), L_TRAILER(0), L_EMPTYEVT(0), L_GRANULARITY(0), L_HIT(0), L_ROC_HEADER(0), L_HUGE_EVENT(0), flag(flags), noOfROC(rocs), theROC(ROCTYPE)
+  : statistics(rocs), L_HEADER(0), L_TRAILER(0), L_EMPTYEVT(0), L_GRANULARITY(0), L_HIT(0), L_ROC_HEADER(0), L_HUGE_EVENT(0), flag(flags), noOfROC(rocs), theROC(ROCTYPE)
 {
 }
 
@@ -451,7 +631,7 @@ int CMSPixelEventDecoder::get_event(std::vector< uint16_t > & data, std::vector<
   statistics.data_blocks = data.size();
 
   evt->clear();
-  statistics.init();
+  statistics.init(noOfROC);
 
   unsigned int pos = 0;
   
@@ -467,20 +647,54 @@ int CMSPixelEventDecoder::get_event(std::vector< uint16_t > & data, std::vector<
   pixel tmp;
     
   LOG(logDEBUG3) << "Looping over event data with granularity " << L_GRANULARITY << ", " << L_GRANULARITY*data.size() << " iterations.";
-        
+
+  // Helper for checking pixel error position:
+  unsigned int invalid_pixel_roc = 0;
+  bool checkroc = false;
+  // Reset lastpixel pointer:
+  LOG(logDEBUG4) << "Resetting lastpixel to col 0 row 0.";
+  lastpixel.col = 0;
+  lastpixel.row = 0;
+
+
   while(pos < L_GRANULARITY*data.size()) {
     // Try to find a new ROC header:
-    if(find_roc_header(data,&pos,roc+1)) roc++;
-    else if(decode_hit(data,&pos,roc,&tmp) == 0) 
-      evt->push_back(tmp);
+    if(find_roc_header(data,&pos,roc+1)) {
+      // Increase ROC count:
+      roc++;
+
+      // Reset lastpixel pointer:
+      LOG(logDEBUG4) << "Resetting lastpixel to col 0 row 0.";
+      lastpixel.col = 0;
+      lastpixel.row = 0;
+
+    }
+    else {
+      int hitstatus = decode_hit(data,&pos,roc,&tmp);
+      // Pixel decoding is fine:
+      if(hitstatus == 0) {
+	// The last pixel was on a differend ROC:
+	if(checkroc == true && roc != invalid_pixel_roc) { statistics.pixels_invalid_eor++; }
+	checkroc = false;
+	statistics.rocmap_valid[roc]++;
+	evt->push_back(tmp);
+      }
+      else if (hitstatus == DEC_ERROR_INVALID_ADDRESS) { 
+	status = DEC_ERROR_INVALID_ADDRESS;
+	statistics.rocmap_invalid[roc]++;
+	invalid_pixel_roc = roc;
+	checkroc = true;
+      }
+    }
   }
+  if(checkroc == true) { statistics.pixels_invalid_eor++; }
 
   // Check sanity of output
-  status = post_check_sanity(evt,roc);
-  if(status != 0) return status;
+  int status2 = post_check_sanity(evt,roc);
 
-  LOG(logDEBUG) << "STATUS end of event processing.";
-  return 0;
+  // Return worst problem (minimum of error code):
+  LOG(logDEBUG) << "STATUS end of event processing, status = " << std::min(status,status2);
+  return std::min(status,status2);
 }
 
 
@@ -590,6 +804,37 @@ int CMSPixelEventDecoder::post_check_sanity(std::vector< pixel > * evt, unsigned
   return 0;
 }
 
+bool CMSPixelEventDecoder::checkPixelOrder(int col, int row) {
+  
+  LOG(logDEBUG4) << "Last pixel was: col " << lastpixel.col << " row " << lastpixel.row;
+  LOG(logDEBUG4) << "New pixel is: col " << col << " row " << row;
+
+  // If new Column is below Column of the last pixel, order is violated.
+  if(lastpixel.col > col) {
+    LOG(logDEBUG4) << "Order is wrong! (newcol > oldcol)";
+    return false;
+  }
+  // If we are still in the same column, check for the row to be higher:
+  else if(lastpixel.col == col) {
+    // In odd columns the next row address is supposed to be lower:
+    if(col%2 != 0) {
+      if(lastpixel.row < row) {
+	LOG(logDEBUG4) << "Order is wrong! (odd col: newrow < oldrow)";
+	return false;
+      }
+    }
+    // In even columns the next row address is supposed to be higher:
+    else if(lastpixel.row > row) {
+      LOG(logDEBUG4) << "Order is wrong! (evencol: newrow > oldrow)";
+      return false;
+    }
+  }
+  // Everything looks fine. Update the lastpixel with these values:
+  LOG(logDEBUG4) << "Order is fine.";
+  lastpixel.col = col;
+  lastpixel.row = row;
+  return true;
+}
 
 bool CMSPixelEventDecoder::convertDcolToCol(int dcol, int pix, int & col, int & row)
 {
@@ -664,12 +909,12 @@ bool CMSPixelEventDecoderDigital::find_roc_header(std::vector< uint16_t > data, 
   if((flag & FLAG_ALLOW_CORRUPT_ROC_HEADERS) && (search_head == 0x7f0 || search_head == 0x7fc || search_head == 0x3f8 || search_head == 0x3f9 || search_head == 0x3fa || search_head == 0x3fb)) {
     LOG(logDEBUG2) << "Found ROC header with bit error (" 
 		   << std::hex << std::setw(3) << search_head << ") after " << std::dec << *pos << " bit.";
-    *pos += L_ROC_HEADER; // jump to next position.    
+    *pos += L_ROC_HEADER; // jump to next position.
     return true;
   }
   else if(search_head == 0x7f8 || search_head == 0x7f9 || search_head == 0x7fa || search_head == 0x7fb) {
     LOG(logDEBUG2) << "Found ROC header (" << std::hex << std::setw(3) << search_head << ") after " << std::dec << *pos << " bit.";
-    *pos += L_ROC_HEADER; // jump to next position.    
+    *pos += L_ROC_HEADER; // jump to next position.
     return true;
   }
   else return false;
@@ -740,22 +985,28 @@ int CMSPixelEventDecoderDigital::decode_hit(std::vector< uint16_t > data, unsign
   int row = -1;            
 
   // Convert and check pixel address and zero bit. Returns TRUE if address is okay:
-  if( convertDcolToCol( dcol, drow, col, row ) && ((pixel_hit>>4)&1) == 0 ) {
-    pixhit->raw = pulseheight;
-    pixhit->col = col;
-    pixhit->row = row;
-    pixhit->roc = roc;
-
-    LOG(logINFO) << "HIT ROC" << std::setw(2) << pixhit->roc << " | pix " << pixhit->col << " " << pixhit->row << ", adc " << pixhit->raw;
-    CMSPixelEventDecoder::statistics.pixels_valid++;
-    return 0;
-  }
-  else {
-    // Something went wrong with the decoding:
-    LOG(logWARNING) << "Failed to convert address of [" << std::hex << pixel_hit << std::dec << "]: dcol " << dcol << " drow " << drow << " (ROC" << roc << ", adc: " << pulseheight << ")";
+  if(!convertDcolToCol( dcol, drow, col, row ) && ((pixel_hit>>4)&1) == 0 ) {
+    LOG(logWARNING) << "Failed to convert address of [" << std::hex << std::setw(6) << std::setfill('0') << pixel_hit << std::dec << "]: dcol " << dcol << " drow " << drow << " (ROC" << roc << ", adc: " << pulseheight << ")";
     CMSPixelEventDecoder::statistics.pixels_invalid++;
     return DEC_ERROR_INVALID_ADDRESS;
   }
+
+  // Check if the new pixel is supposed to be here according to the ROC readout scheme:
+  if(!checkPixelOrder(col, row) && !(flag&FLAG_NOT_DISCARD_OUTOFORDER_PIXELS)) {
+    LOG(logWARNING) << "Readout order not valid for pixel [" << std::hex << std::setw(6) << std::setfill('0') << pixel_hit << std::dec << "]: col " << col << " row " << row << " (ROC" << roc << ", adc: " << pulseheight << ")";
+    CMSPixelEventDecoder::statistics.pixels_invalid++;
+    return DEC_ERROR_INVALID_ADDRESS;	
+  }
+
+  pixhit->raw = pulseheight;
+  pixhit->col = col;
+  pixhit->row = row;
+  pixhit->roc = roc;
+
+  LOG(logINFO) << "HIT ROC" << std::setw(2) << pixhit->roc << " | pix " << pixhit->col << " " << pixhit->row << ", adc " << pixhit->raw;
+  CMSPixelEventDecoder::statistics.pixels_valid++;
+  if(pixhit->raw == 0) CMSPixelEventDecoder::statistics.pixels_valid_zeroph++;
+  return 0;
 }
 
 
@@ -866,7 +1117,19 @@ int CMSPixelEventDecoderAnalog::decode_hit(std::vector< uint16_t > data, unsigne
   int row = -1;
 
   // Convert and check pixel address from double column address. Returns TRUE if address is okay:
-  if( convertDcolToCol( dcol, drow, col, row ) ) {
+  if(!convertDcolToCol( dcol, drow, col, row ) ) {
+    LOG(logWARNING) << "Failed to convert address: dcol " << dcol << " drow " << drow << " (ROC" << roc << ", adc: " << aa << ")";
+    CMSPixelEventDecoder::statistics.pixels_invalid++;
+    return DEC_ERROR_INVALID_ADDRESS;
+  }
+
+  // Check if the new pixel is supposed to be here according to the ROC readout scheme:
+  if(!checkPixelOrder(col, row) && !(flag&FLAG_NOT_DISCARD_OUTOFORDER_PIXELS)) {
+    LOG(logWARNING) << "Readout order not valid for pixel: col " << col << " row " << row << " (ROC" << roc << ", adc: " << aa << ")";
+    CMSPixelEventDecoder::statistics.pixels_invalid++;
+    return DEC_ERROR_INVALID_ADDRESS;	
+  }
+      
     pixhit->raw = aa;
     pixhit->col = col;
     pixhit->row = row;
@@ -874,13 +1137,8 @@ int CMSPixelEventDecoderAnalog::decode_hit(std::vector< uint16_t > data, unsigne
 
     LOG(logINFO) << "HIT ROC" << std::setw(2) << pixhit->roc << " | pix " << pixhit->col << " " << pixhit->row << ", adc " << pixhit->raw;
     CMSPixelEventDecoder::statistics.pixels_valid++;
+    if(pixhit->raw == 0) CMSPixelEventDecoder::statistics.pixels_valid_zeroph++;
     return 0;
-  }
-  else {
-    LOG(logWARNING) << "Failed to convert address: dcol " << dcol << " drow " << drow << " (ROC" << roc << ", adc: " << aa << ")";
-    CMSPixelEventDecoder::statistics.pixels_invalid++;
-    return DEC_ERROR_INVALID_ADDRESS;
-  }
 }
 
 int CMSPixelEventDecoderAnalog::findBin(int adc, int nlevel, std::vector< int > level ) {

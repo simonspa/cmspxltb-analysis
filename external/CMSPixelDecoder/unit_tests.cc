@@ -148,13 +148,41 @@ int main(int argc, char* argv[]) {
 
 bool compare(CMSPixelStatistics reference, CMSPixelStatistics measurement)
 {
-  if(reference.head_data != measurement.head_data) return false;
-  if(reference.head_trigger != measurement.head_trigger) return false;
-  if(reference.evt_valid != measurement.evt_valid) return false;
-  if(reference.evt_empty != measurement.evt_empty) return false;
-  if(reference.evt_invalid != measurement.evt_invalid) return false;
-  if(reference.pixels_valid != measurement.pixels_valid) return false;
-  if(reference.pixels_invalid != measurement.pixels_invalid) return false;
+  if(reference.head_data != measurement.head_data) {
+    std::cout << "hdata ref " << reference.head_data
+	      << " != meas " << measurement.head_data << std::endl;
+    return false;
+  }
+  if(reference.head_trigger != measurement.head_trigger) {
+    std::cout << "htrig ref " << reference.head_trigger
+	      << " != meas " << measurement.head_trigger << std::endl;
+    return false;
+  }
+  if(reference.evt_valid != measurement.evt_valid) {
+    std::cout << "eval ref " << reference.evt_valid
+	      << " != meas " << measurement.evt_valid << std::endl;
+    return false;
+  }
+  if(reference.evt_empty != measurement.evt_empty) {
+    std::cout << "eempt ref " << reference.evt_empty
+	      << " != meas " << measurement.evt_empty << std::endl;
+    return false;
+  }
+  if(reference.evt_invalid != measurement.evt_invalid) {
+    std::cout << "eival ref " << reference.evt_invalid
+	      << " != meas " << measurement.evt_invalid << std::endl;
+    return false;
+  }
+  if(reference.pixels_valid != measurement.pixels_valid) {
+    std::cout << "pxval ref " << reference.pixels_valid
+	      << " != meas " << measurement.pixels_valid << std::endl;
+    return false;
+  }
+  if(reference.pixels_invalid != measurement.pixels_invalid) {
+    std::cout << "pxival ref " << reference.pixels_invalid
+	      << " != meas " << measurement.pixels_invalid << std::endl;
+    return false;
+  }
 
   return true;
 }
@@ -262,6 +290,50 @@ bool test_digital_single()
   std::vector<pixel> * evt = new std::vector<pixel>;
   timing time;
   CMSPixelFileDecoder * dec = new CMSPixelFileDecoderPSI_ATB("data/mtb.bin.dig",1,FLAG_ALLOW_CORRUPT_ROC_HEADERS,ROC_PSI46DIG,"");
+
+  clock_t begin = clock();
+  while(1)
+    if(dec->get_event(evt, time) <= DEC_ERROR_NO_MORE_DATA) break;
+  clock_t end = clock();
+  double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+  std::cout << "     Timing: " << elapsed_secs << " sec, " << dec->statistics.head_data/elapsed_secs << " events/sec." << std::endl;
+  delete evt;
+
+  // Timing check:
+  if(elapsed_secs <= 0.92*ref_timing || elapsed_secs >= 1.08*ref_timing) {
+    std::cout << "     Timing requirements NOT met! (should be " << ref_timing << " sec)" << std::endl;
+  }
+
+  // Decoding check:
+  if(!compare(ref,dec->statistics)) {
+    delete dec;
+    return false;
+  }
+  else {
+    delete dec;
+    std::cout << "SUCCEEDED." << std::endl;
+    return true;
+  }
+}
+
+bool test_digital_single_dtb()
+{
+  std::cout << "Unit testing: DTB Testboard - Digital Single ROC" << std::endl;
+
+  // REFERENCE:
+  CMSPixelStatistics ref;
+  ref.head_data = 108309;
+  ref.head_trigger = 0;
+  ref.evt_empty = 0;
+  ref.evt_valid = 108309;
+  ref.pixels_valid = 1183271;
+  ref.evt_invalid = 0;
+  ref.pixels_invalid = 0;
+  double ref_timing = 1.69;
+
+  std::vector<pixel> * evt = new std::vector<pixel>;
+  timing time;
+  CMSPixelFileDecoder * dec = new CMSPixelFileDecoderPSI_DTB("data/mtb.bin.dtb.dig",1,0,ROC_PSI46DIGV2,"");
 
   clock_t begin = clock();
   while(1)
@@ -477,6 +549,7 @@ bool unit_tests() {
   if(!test_analog_single()) return false;
   if(!test_analog_single_tb()) return false;
   if(!test_digital_single()) return false;
+  if(!test_digital_single_dtb()) return false;
 
   if(!test_analog_module()) return false;
   //if(!test_digital_module()) return false;

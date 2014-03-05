@@ -1,10 +1,13 @@
-// Version: $Id: CMSPixelDecoder.h 2371 2013-02-14 08:49:35Z spanns $
-/*========================================================================*/
-/*          CMSPixel Decoder v3.1                                         */
-/*          Author: Simon Spannagel (s.spannagel@cern.ch)                 */
-/*          Created       23 feb 2012                                     */
-/*          Last modified 29 apr 2013                                     */
-/*========================================================================*/
+/*==========================================================================*/
+/*          CMSPixel Decoder                                                */
+/*          Questions: s.spannagel@cern.ch                                  */
+/*          Source: https://github.com/simonspa/CMSPixelDecoder             */
+/*                                                                          */
+/* CMSPixel Decoder is free software: you can redistribute it and/or modify */
+/* it under the terms of the GNU General Public License as published by     */
+/* the Free Software Foundation, either version 3 of the License, or        */
+/* (at your option) any later version.                                      */
+/*==========================================================================*/
 
 #ifndef CMSPIXELDECODER_H_
 #define CMSPIXELDECODER_H_
@@ -28,6 +31,7 @@
 #define FLAG_16BITS_PER_WORD 8
 #define FLAG_OVERWRITE_ROC_HEADER_POS 16
 #define FLAG_OLD_RAL_FORMAT 32
+#define FLAG_NOT_DISCARD_OUTOFORDER_PIXELS 64
 
 // Decoder errors:
 #define DEC_ERROR_EMPTY_EVENT -1
@@ -56,7 +60,8 @@ namespace CMSPixel {
     ROC_PSI46DIG      = 0x04,
     ROC_PSI46DIG_TRIG = 0x08,
     ROC_PSI46DIGV2_B  = 0x10,
-    ROC_PSI46DIGV2    = 0x20
+    ROC_PSI46DIGV2    = 0x20,
+    ROC_PSI46DIGV21   = 0x40
   };
 
   // Struct for raw data readout
@@ -71,7 +76,10 @@ namespace CMSPixel {
   typedef struct {
     int64_t timestamp;
     uint32_t trigger_number;
+    uint32_t token_number;
+    char triggers_stagged;
     char trigger_phase;
+    char data_phase;
   } timing;
 
   // Struct for Decoder levels
@@ -92,16 +100,21 @@ namespace CMSPixel {
 
   class CMSPixelStatistics {
   public:
-    CMSPixelStatistics() :
+    CMSPixelStatistics(unsigned int nrocs = 1) :
     data_blocks(0),
       head_data(0),
       head_trigger(0),
       evt_valid(0),
       evt_empty(0),
       evt_invalid(0),
+      ipbus_invalid(0),
       pixels_valid(0),
-      pixels_invalid(0)	{ init(); };
-    void init();
+      pixels_valid_zeroph(0),
+      pixels_invalid(0),
+      pixels_invalid_eor(0),
+      rocmap_invalid(),
+      rocmap_valid() { init(nrocs); };
+    void init(unsigned int nrocs);
     void update(CMSPixelStatistics stats);
     void print();
     std::string get();
@@ -119,11 +132,21 @@ namespace CMSPixel {
     //  * No ROC headers / wrong number of ROC headers
     //  * Missing TBM Header or Trailer
     uint32_t evt_invalid;
+    // Number of invalid IPBus events - this means usually the data size reported
+    // inside the IPBus header does not match the data read out for that event.
+    uint32_t ipbus_invalid;
     // Number of correctly decoded pixel hits
     uint32_t pixels_valid;
+    // Number of valid pixels with pulse height zero:
+    uint32_t pixels_valid_zeroph;
     // Number of pixel hits with invalid address or zero-bit (undecodable)
     // Events containing only some invalid pixels are still delivered, only return value is set.
     uint32_t pixels_invalid;
+    // Subset of invalid pixels which come from the end of a ROC readout
+    uint32_t pixels_invalid_eor;
+    // Map of all ROCs, with the value being the number of invalid pixels on that ROC
+    std::map<unsigned int, unsigned int> rocmap_invalid;
+    std::map<unsigned int, unsigned int> rocmap_valid;
 
     //    int data_notrailer;
     //    int data_huge;
@@ -150,6 +173,7 @@ namespace CMSPixel {
 
   protected:
     bool convertDcolToCol(int dcol, int pix, int & col, int & row);
+    bool checkPixelOrder(int col, int row);
 
     unsigned int L_HEADER, L_TRAILER, L_EMPTYEVT, L_GRANULARITY, L_HIT, L_ROC_HEADER, L_HUGE_EVENT;
     const int flag;
@@ -168,6 +192,8 @@ namespace CMSPixel {
     // These functions are the same no matter what data format we have:
     int pre_check_sanity(std::vector< uint16_t > * data, unsigned int * pos);
     int post_check_sanity(std::vector< pixel > * evt, unsigned int rocs);
+
+    pixel lastpixel;
 
   };
 
@@ -265,12 +291,8 @@ namespace CMSPixel {
     virtual ~CMSPixelFileDecoder();
 
     int get_event(std::vector<pixel> * decevt, timing & evt_timing);
-
-    virtual bool word_is_data(unsigned short word) = 0;
-    virtual bool word_is_trigger(unsigned short word) = 0;
-    virtual bool word_is_header(unsigned short word) = 0;
-    virtual bool word_is_2nd_header(unsigned short word) = 0;
-    virtual bool process_rawdata(std::vector< uint16_t > * rawdata) = 0;
+    virtual std::vector<uint16_t> get_rawdata();
+    virtual bool process_rawdata(std::vector< uint16_t > * /*rawdata*/) { return true; };
 
     CMSPixelStatistics statistics;
     CMSPixelEventDecoder * evt;
@@ -278,12 +300,15 @@ namespace CMSPixel {
   protected:
     uint8_t theROC;
     virtual bool readWord(uint16_t &word);
+    virtual bool check_data();
+
     FILE * mtbStream;
-    //int64_t cmstime;
     timing cms_t;
+    std::vector<uint16_t> lastevent_raw;
+
+    virtual bool chop_datastream(std::vector< uint16_t > * rawdata) = 0;
 
   private:
-    bool chop_datastream(std::vector< uint16_t > * rawdata);
     bool read_address_levels(const char* levelsFile, unsigned int rocs, levelset & addressLevels);
     std::string print_addresslevels(levelset addLevels);
     levelset addressLevels;
@@ -293,24 +318,16 @@ namespace CMSPixel {
   public:
   CMSPixelFileDecoderRAL(const char *FileName, unsigned int rocs, int flags, uint8_t ROCTYPE) : CMSPixelFileDecoder(FileName, rocs, addflags(flags), ROCTYPE, ""), ral_flags(flags) {};
     ~CMSPixelFileDecoderRAL() {};
+    std::vector<uint16_t> get_rawdata();
   private:
+    bool chop_datastream(std::vector< uint16_t > * rawdata);
     int ral_flags;
     inline int addflags(int flags) {
       return (flags | FLAG_16BITS_PER_WORD);
     };
     bool readWord(uint16_t &word);
-    inline bool word_is_data(unsigned short word) {
-      // IPBus format starts with 0xFFFFFFFF, no other headers allowed.
-      if(word == 0xFFFF) return true;
-      else return false;
-    };
-    inline bool word_is_trigger(unsigned short word) {
-      // IPBus format doesn't know about trigger headers.
-      (void)word;
-      return false;
-    };
     inline bool word_is_header(unsigned short word) {
-      // IPBus format doesn't know about headers other than data headers.
+      // IPBus format starts with 0xFFFFFFFF, no other headers allowed.
       if(word == 0xFFFF) return true;
       else return false;
     };
@@ -321,11 +338,28 @@ namespace CMSPixel {
     bool process_rawdata(std::vector< uint16_t > * rawdata);
   };
 
+  class CMSPixelStreamDecoderRAL : public CMSPixelFileDecoderRAL {
+  public:
+  CMSPixelStreamDecoderRAL(std::vector<uint32_t> * datastream, unsigned int rocs, int flags, uint8_t ROCTYPE);
+    ~CMSPixelStreamDecoderRAL() {};
+  private:
+    bool chop_datastream(std::vector< uint16_t > * rawdata);
+    bool check_data();
+    std::vector<uint32_t> *datablob;
+    std::vector<uint32_t>::iterator datait;
+    inline bool word_is_header(uint32_t word) {
+      // IPBus format starts with 0xFFFFFFFF, no other headers allowed.
+      if(word == 0xffffffff) return true;
+      else return false;
+    };
+  };
+
 class CMSPixelFileDecoderPSI_ATB : public CMSPixelFileDecoder {
   public:
   CMSPixelFileDecoderPSI_ATB(const char *FileName, unsigned int rocs, int flags, uint8_t ROCTYPE, const char *addressFile) : CMSPixelFileDecoder(FileName, rocs, flags, ROCTYPE, addressFile) {};
     ~CMSPixelFileDecoderPSI_ATB() {};
   private:
+    bool chop_datastream(std::vector< uint16_t > * rawdata);
     inline bool word_is_data(unsigned short word) {
       if(word == 0x8001 || word == 0x8081 || word == 0x8005) return true;
       else return false;
@@ -338,37 +372,19 @@ class CMSPixelFileDecoderPSI_ATB : public CMSPixelFileDecoder {
       if(word == 0x8001 || word == 0x8081 || word == 0x8005 || word == 0x8004 || word == 0x8002 || word == 0x8008 || word == 0x8010) return true;
       else return false;
     };
-    inline bool word_is_2nd_header(unsigned short word) {
-      // PSI ATB features 16bit headers only.
-      (void)word;
-      return true;
-    };
-    bool process_rawdata(std::vector< uint16_t > * rawdata);
   };
 
 class CMSPixelFileDecoderPSI_DTB : public CMSPixelFileDecoder {
   public:
-  CMSPixelFileDecoderPSI_DTB(const char *FileName, unsigned int rocs, int flags, uint8_t ROCTYPE, const char *addressFile) : CMSPixelFileDecoder(FileName, rocs, flags, ROCTYPE, addressFile) {};
+  CMSPixelFileDecoderPSI_DTB(const char *FileName, unsigned int rocs, int flags, uint8_t ROCTYPE, const char *addressFile) : CMSPixelFileDecoder(FileName, rocs, flags | FLAG_12BITS_PER_WORD, ROCTYPE, addressFile) {};
     ~CMSPixelFileDecoderPSI_DTB() {};
   private:
+    bool chop_datastream(std::vector< uint16_t > * rawdata);
+
     inline bool word_is_data(unsigned short word) {
-      if(word == 0x8501 || word == 0x8581 || word == 0x8505) return true;
+      if((word&0xF000) > 0x0000) return true;
       else return false;
     };
-    inline bool word_is_trigger(unsigned short word) {
-      if(word == 0x8504) return true;
-      else return false;
-    };
-    inline bool word_is_header(unsigned short word) {
-      if(word == 0x8501 || word == 0x8581 || word == 0x8505 || word == 0x8504 || word == 0x8502 || word == 0x8508 || word == 0x8510) return true;
-      else return false;
-    };
-    inline bool word_is_2nd_header(unsigned short word) {
-      // PSI DTB features 16bit headers only.
-      (void)word;
-      return true;
-    };
-    bool process_rawdata(std::vector< uint16_t > * rawdata);
   };
 
 
