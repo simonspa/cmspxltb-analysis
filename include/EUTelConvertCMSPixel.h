@@ -19,6 +19,13 @@
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
 // AIDA includes
 #include <AIDA/IBaseHistogram.h>
+#include <marlin/AIDAProcessor.h>
+#include <AIDA/IAxis.h>
+#include <AIDA/IHistogram1D.h>
+#include <AIDA/IHistogram2D.h>
+#include <AIDA/IProfile1D.h>
+#include <AIDA/IProfile2D.h>
+#include <AIDA/ITree.h>
 #endif
 
 // Marlin includes
@@ -154,6 +161,7 @@ namespace eutelescope
 	    static std::string _dataPhaseHitCutHistoName;
 	    static std::string _dcolMonitorHistoName;
 	    static std::string _dcolMonitorEvtHistoName;
+	    static std::string _rbMonitorHistoName;
 	    //! Histogram name of the hit map
 	    static std::string _hitMapHistoName;
 	    static std::string _hitMapTrigHistoName;

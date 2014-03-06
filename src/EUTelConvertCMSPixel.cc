@@ -34,6 +34,7 @@
 #include <AIDA/IHistogramFactory.h>
 #include <AIDA/IHistogram1D.h>
 #include <AIDA/IHistogram2D.h>
+#include <AIDA/IProfile1D.h>
 #include <AIDA/ITree.h>
 #endif
 
@@ -72,6 +73,7 @@ std::string EUTelConvertCMSPixel::_dataPhaseHitHistoName        = "dataPhaseHit"
 std::string EUTelConvertCMSPixel::_dataPhaseHitCutHistoName     = "dataPhaseHitCut";
 std::string EUTelConvertCMSPixel::_dcolMonitorHistoName         = "dcolMonitor";
 std::string EUTelConvertCMSPixel::_dcolMonitorEvtHistoName      = "dcolMonitorEvt";
+std::string EUTelConvertCMSPixel::_rbMonitorHistoName         = "rbMonitor";
 #endif
 
 
@@ -275,9 +277,10 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       // Initialize pixel vector:
       std::vector< pixel > event_data;
       CMSPixel::timing evt_timing;
+      std::vector< uint16_t > evt_readback;
 
       // Read next event from file, containing all ROCs / pixels for one trigger:
-      status = readout->get_event(&event_data,evt_timing);
+      status = readout->get_event(&event_data,&evt_readback,evt_timing);
 
       // Fill the trigger phase histogram for all events, even empty ones:
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHistoName]))->fill((int)evt_timing.trigger_phase);
@@ -321,7 +324,6 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 
       // Fill the trigger phase histograms of events containing a hit:
       if(!event_data.empty()) (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHitHistoName]))->fill((int)evt_timing.trigger_phase);
-
       if(!event_data.empty()) (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_dataPhaseHitHistoName]))->fill((int)evt_timing.data_phase);
 
       // Initialize bool to write trigger phase for events within the cut boundaries:
@@ -333,6 +335,12 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       // Now loop over all ROC chips to be read out:
       for(uint16_t iROC = 0; iROC < _noOfROC; iROC++) {
 	//      while(it != event_data.end()) {
+
+	// Fill the readback data histograms:
+	if(evt_readback.size() > iROC) {
+	  std::string tempHistoName = _rbMonitorHistoName + "_d" + to_string( iROC );
+	  (dynamic_cast<AIDA::IProfile1D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double>(eventNumber),static_cast<double>(evt_readback.at(iROC)),1.);
+	}
 
 	//streamlog_out(DEBUG5) << "Processing ROC " << (*it).roc << std::endl;
 	streamlog_out(DEBUG5) << "Processing ROC " << iROC << std::endl;
@@ -513,6 +521,12 @@ void EUTelConvertCMSPixel::bookHistos() {
     AIDA::IHistogram2D * dcolMonitorHisto = AIDAProcessor::histogramFactory(this)->createHistogram2D( (basePath + tempHistoName).c_str(), 1000, 0, 1000, 52, -0.5, 51.5);
     _aidaHistoMap.insert(make_pair(tempHistoName, dcolMonitorHisto));
     dcolMonitorHisto->setTitle(dcolMonitorTitle.c_str());
+
+    string rbMonitorTitle = "Readback value over event #, ROC" + to_string( iDetector ) + ";event # / 10;readback value [au]";
+    tempHistoName = _rbMonitorHistoName + "_d" + to_string( iDetector );
+    AIDA::IProfile1D * rbMonitorHisto = AIDAProcessor::histogramFactory(this)->createProfile1D( (basePath + tempHistoName).c_str(), 50000, 0, 500000, 0, 655535);
+    _aidaHistoMap.insert(make_pair(tempHistoName, rbMonitorHisto));
+    rbMonitorHisto->setTitle(rbMonitorTitle.c_str());
 
     string dcolMonitorEvtTitle = "DCOL hits over event #, ROC" + to_string( iDetector ) + ";event # / 100;column ID;hits per 100 events";
     tempHistoName = _dcolMonitorEvtHistoName + "_d" + to_string( iDetector );
