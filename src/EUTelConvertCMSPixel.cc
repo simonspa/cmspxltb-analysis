@@ -277,7 +277,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       // Initialize pixel vector:
       std::vector< pixel > event_data;
       CMSPixel::timing evt_timing;
-      std::vector< uint16_t > evt_readback;
+      std::vector<std::pair< uint8_t, uint8_t> > evt_readback;
 
       // Read next event from file, containing all ROCs / pixels for one trigger:
       status = readout->get_event(&event_data,&evt_readback,evt_timing);
@@ -339,7 +339,25 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	// Fill the readback data histograms:
 	if(evt_readback.size() > iROC) {
 	  std::string tempHistoName = _rbMonitorHistoName + "_d" + to_string( iROC );
-	  (dynamic_cast<AIDA::IProfile1D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double>(eventNumber),static_cast<double>(evt_readback.at(iROC)),1.);
+	  std::string tempTitle = "Readback value over event #, ROC" + to_string( iROC ) + ", DAC" + to_string((int)evt_readback.at(iROC).first) + ";event # / 10;readback value [au]";
+
+	  // Calibration of the internal ROC ADC (by Beat Meier):
+	  double value;
+	  if(evt_readback.at(iROC).first == 8 || evt_readback.at(iROC).first == 9) {
+	    //  8  VD unreg (2*5.75 mV / digit)
+	    //  9  VA unreg (2*5.75 mV / digit)
+	    value = evt_readback.at(iROC).second*11.5;
+	  }
+	  else if(evt_readback.at(iROC).first == 10 || evt_readback.at(iROC).first == 11) {
+	    // 10  Vana regulated (5.75 mV / digit)
+	    // 11  Vref (5.75 mV / digit)
+	    value = evt_readback.at(iROC).second*5.75; 
+	  }
+	  else if(evt_readback.at(iROC).first == 12) value = evt_readback.at(iROC).second*0.1425; // 12  Iana (0.1425 mA / digit)
+	  else value = evt_readback.at(iROC).second; // The rest...
+
+	  (dynamic_cast<AIDA::IProfile1D*> (_aidaHistoMap[tempHistoName]))->setTitle(tempTitle.c_str());
+	  (dynamic_cast<AIDA::IProfile1D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double>(eventNumber),value,1.);
 	}
 
 	//streamlog_out(DEBUG5) << "Processing ROC " << (*it).roc << std::endl;
@@ -524,7 +542,7 @@ void EUTelConvertCMSPixel::bookHistos() {
 
     string rbMonitorTitle = "Readback value over event #, ROC" + to_string( iDetector ) + ";event # / 10;readback value [au]";
     tempHistoName = _rbMonitorHistoName + "_d" + to_string( iDetector );
-    AIDA::IProfile1D * rbMonitorHisto = AIDAProcessor::histogramFactory(this)->createProfile1D( (basePath + tempHistoName).c_str(), 50000, 0, 500000, 0, 655535);
+    AIDA::IProfile1D * rbMonitorHisto = AIDAProcessor::histogramFactory(this)->createProfile1D( (basePath + tempHistoName).c_str(), 50000, 0, 500000, 0, 3000);
     _aidaHistoMap.insert(make_pair(tempHistoName, rbMonitorHisto));
     rbMonitorHisto->setTitle(rbMonitorTitle.c_str());
 
