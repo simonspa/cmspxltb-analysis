@@ -339,24 +339,59 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	// Fill the readback data histograms:
 	if(evt_readback.size() > iROC) {
 	  std::string tempHistoName = _rbMonitorHistoName + "_d" + to_string( iROC );
-	  std::string tempTitle = "Readback value over event #, ROC" + to_string( iROC ) + ", DAC" + to_string((int)evt_readback.at(iROC).first) + ";event # / 10;readback value [au]";
 
 	  // Calibration of the internal ROC ADC (by Beat Meier):
 	  double value;
-	  if(evt_readback.at(iROC).first == 8 || evt_readback.at(iROC).first == 9) {
+	  std::string dacname;
+	  if(evt_readback.at(iROC).first == 0) {
+	    dacname = "lastDAC value";
+	    value = evt_readback.at(iROC).second;
+	  }
+	  else if(evt_readback.at(iROC).first == 1) {
+	    dacname = "lastDAC register";
+	    value = evt_readback.at(iROC).second;
+	  }
+	  else if(evt_readback.at(iROC).first == 2) {
+	    dacname = "last pixel column [graycode]";
+	    value = evt_readback.at(iROC).second;
+	  }
+	  else if(evt_readback.at(iROC).first == 3) {
+	    dacname = "last pixel row [graycode]";
+	    value = evt_readback.at(iROC).second;
+	  }
+	  else if(evt_readback.at(iROC).first == 8) {
 	    //  8  VD unreg (2*5.75 mV / digit)
-	    //  9  VA unreg (2*5.75 mV / digit)
+	    dacname = "VD unreg [mV]";
 	    value = evt_readback.at(iROC).second*11.5;
 	  }
-	  else if(evt_readback.at(iROC).first == 10 || evt_readback.at(iROC).first == 11) {
+	  else if(evt_readback.at(iROC).first == 9) {
+	    //  9  VA unreg (2*5.75 mV / digit)
+	    dacname = "VA unreg [mV]";
+	    value = evt_readback.at(iROC).second*11.5;
+	  }
+	  else if(evt_readback.at(iROC).first == 10) {
 	    // 10  Vana regulated (5.75 mV / digit)
-	    // 11  Vref (5.75 mV / digit)
+	    dacname = "Vana regulated [mV]";
 	    value = evt_readback.at(iROC).second*5.75; 
 	  }
-	  else if(evt_readback.at(iROC).first == 12) value = evt_readback.at(iROC).second*0.1425; // 12  Iana (0.1425 mA / digit)
-	  else value = evt_readback.at(iROC).second; // The rest...
+	  else if(evt_readback.at(iROC).first == 11) {
+	    // 11  Vref (5.75 mV / digit)
+	    dacname = "Vref [mV]";
+	    value = evt_readback.at(iROC).second*5.75; 
+	  }
+	  else if(evt_readback.at(iROC).first == 12) {
+	    dacname = "Iana [mA]";
+	    value = evt_readback.at(iROC).second*0.1425; // 12  Iana (0.1425 mA / digit)
+	  }
+	  else {
+	    dacname = "DAC " + to_string((int)evt_readback.at(iROC).first);
+	    value = evt_readback.at(iROC).second; // The rest...
+	  }
 
-	  (dynamic_cast<AIDA::IProfile1D*> (_aidaHistoMap[tempHistoName]))->setTitle(tempTitle.c_str());
+	  std::string tempTitle = "Readback value over event #, ROC" + to_string( iROC ) + ";event # / 10;" + dacname;
+
+	  // Not always update title:
+	  if(eventNumber%1000 == 50) (dynamic_cast<AIDA::IProfile1D*> (_aidaHistoMap[tempHistoName]))->setTitle(tempTitle.c_str());
 	  (dynamic_cast<AIDA::IProfile1D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double>(eventNumber),value,1.);
 	}
 
