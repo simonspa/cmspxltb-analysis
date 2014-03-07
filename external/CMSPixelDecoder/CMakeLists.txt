@@ -7,7 +7,7 @@ option(BUILD_TOOLS "Build the CMSPixelDecoder testing tools" OFF)
 option(BUILD_D2H "Build the d2h data conversion tools" OFF)
 
 # Library Version
-SET(CMSPIXELDECODER_LIB_VERSION "3.6.2")
+SET(CMSPIXELDECODER_LIB_VERSION "3.6.4")
 SET(CMSPIXELDECODER_LIB_SOVERSION "3")
 
 CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake.h" "${CMAKE_CURRENT_BINARY_DIR}/version.h" @ONLY)
@@ -56,8 +56,8 @@ IF(BUILD_TOOLS)
   ADD_EXECUTABLE (unit_tests unit_tests.cc)
   TARGET_LINK_LIBRARIES (unit_tests  ${DEC_LIB})
 
-  ADD_EXECUTABLE (stream_decode stream_decode.cc)
-  TARGET_LINK_LIBRARIES (stream_decode  ${DEC_LIB})
+  ADD_EXECUTABLE (text_decode text_decode.cc)
+  TARGET_LINK_LIBRARIES (text_decode  ${DEC_LIB})
 
   ADD_EXECUTABLE (stat_tool stat_tool.cc)
   TARGET_LINK_LIBRARIES (stat_tool ${DEC_LIB})
