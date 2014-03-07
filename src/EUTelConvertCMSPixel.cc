@@ -65,6 +65,7 @@ std::string EUTelConvertCMSPixel::_hitMapTrigHistoName          = "hitMapTrig";
 std::string EUTelConvertCMSPixel::_hitMapCutHistoName           = "hitMapCut";
 std::string EUTelConvertCMSPixel::_pulseHeightHistoName        	= "pulseHeight";
 std::string EUTelConvertCMSPixel::_triggerPhaseHistoName        = "triggerPhase";
+std::string EUTelConvertCMSPixel::_triggerPhaseBadEventsHistoName = "triggerPhaseBadEvents";
 std::string EUTelConvertCMSPixel::_triggerPhasePixelsHistoName  =  "triggerPhasePixels";
 std::string EUTelConvertCMSPixel::_triggerPhaseHitHistoName     = "triggerPhaseHit";
 std::string EUTelConvertCMSPixel::_triggerPhaseHitCutHistoName  = "triggerPhaseHitCut";
@@ -285,7 +286,10 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 
       // Fill the trigger phase histogram for all events, even empty ones:
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHistoName]))->fill((int)evt_timing.trigger_phase);
-      (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHistoName]))->fill((int)evt_timing.trigger_phase);
+
+      // If we encountered some sort of decoding error, fill it in this histogram:
+      if(status < DEC_ERROR_EMPTY_EVENT) (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseBadEventsHistoName]))->fill((int)evt_timing.trigger_phase);
+
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_dataPhaseHistoName]))->fill((int)evt_timing.data_phase);
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerStackingHistoName]))->fill((int)evt_timing.triggers_stacked);
 
@@ -600,6 +604,11 @@ void EUTelConvertCMSPixel::bookHistos() {
   AIDA::IHistogram1D * triggerPhaseHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 10,-1,8);
   _aidaHistoMap.insert(make_pair(tempHistoName, triggerPhaseHisto));
   triggerPhaseHisto->setTitle("Trigger Phase;phase bits; # events");
+
+  tempHistoName = _triggerPhaseBadEventsHistoName;
+  AIDA::IHistogram1D * triggerPhaseBadEventsHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 10,-1,8);
+  _aidaHistoMap.insert(make_pair(tempHistoName, triggerPhaseBadEventsHisto));
+  triggerPhaseBadEventsHisto->setTitle("Trigger Phase in events with decoding issues;phase bits; # events");
 
   tempHistoName = _triggerPhaseHitHistoName;
   AIDA::IHistogram1D * triggerPhaseHitHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 10,-1,8);
