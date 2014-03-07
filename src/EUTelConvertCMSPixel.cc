@@ -61,19 +61,20 @@ using namespace eutelescope;
 
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
 std::string EUTelConvertCMSPixel::_hitMapHistoName              = "hitMap";
-std::string EUTelConvertCMSPixel::_hitMapTrigHistoName              = "hitMapTrig";
-std::string EUTelConvertCMSPixel::_hitMapCutHistoName              = "hitMapCut";
+std::string EUTelConvertCMSPixel::_hitMapTrigHistoName          = "hitMapTrig";
+std::string EUTelConvertCMSPixel::_hitMapCutHistoName           = "hitMapCut";
 std::string EUTelConvertCMSPixel::_pulseHeightHistoName        	= "pulseHeight";
 std::string EUTelConvertCMSPixel::_triggerPhaseHistoName        = "triggerPhase";
 std::string EUTelConvertCMSPixel::_triggerPhasePixelsHistoName  =  "triggerPhasePixels";
-std::string EUTelConvertCMSPixel::_triggerPhaseHitHistoName        = "triggerPhaseHit";
-std::string EUTelConvertCMSPixel::_triggerPhaseHitCutHistoName        = "triggerPhaseHitCut";
+std::string EUTelConvertCMSPixel::_triggerPhaseHitHistoName     = "triggerPhaseHit";
+std::string EUTelConvertCMSPixel::_triggerPhaseHitCutHistoName  = "triggerPhaseHitCut";
+std::string EUTelConvertCMSPixel::_triggerStackingHistoName     = "triggerStacking";
 std::string EUTelConvertCMSPixel::_dataPhaseHistoName           = "dataPhase";
 std::string EUTelConvertCMSPixel::_dataPhaseHitHistoName        = "dataPhaseHit";
 std::string EUTelConvertCMSPixel::_dataPhaseHitCutHistoName     = "dataPhaseHitCut";
 std::string EUTelConvertCMSPixel::_dcolMonitorHistoName         = "dcolMonitor";
 std::string EUTelConvertCMSPixel::_dcolMonitorEvtHistoName      = "dcolMonitorEvt";
-std::string EUTelConvertCMSPixel::_rbMonitorHistoName         = "rbMonitor";
+std::string EUTelConvertCMSPixel::_rbMonitorHistoName           = "rbMonitor";
 #endif
 
 
@@ -286,6 +287,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHistoName]))->fill((int)evt_timing.trigger_phase);
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHistoName]))->fill((int)evt_timing.trigger_phase);
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_dataPhaseHistoName]))->fill((int)evt_timing.data_phase);
+      (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerStackingHistoName]))->fill((int)evt_timing.triggers_stacked);
 
       // Get timestamp from first event:
       if(timestamp_event1 == 0) timestamp_event1 = evt_timing.timestamp;
@@ -507,7 +509,7 @@ void EUTelConvertCMSPixel::end () {
 void EUTelConvertCMSPixel::fillHistos (int xCoord, int yCoord, int value, int sensorID, int64_t timestamp, int triggerphase, int evt) {
 
   string tempHistoName;
-			
+
   tempHistoName = _hitMapHistoName + "_d" + to_string( sensorID );
   (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double >(xCoord), static_cast<double >(yCoord), 1.);
 
@@ -624,6 +626,10 @@ void EUTelConvertCMSPixel::bookHistos() {
   _aidaHistoMap.insert(make_pair(tempHistoName, dataPhaseHitCutHisto));
   dataPhaseHitCutHisto->setTitle("Data Phase of events w/ pixel hit at the scintillator position;phase bits; # events w/ pixel hits");
 
+  tempHistoName = _triggerStackingHistoName;
+  AIDA::IHistogram1D * triggerStackingHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 17,0,16);
+  _aidaHistoMap.insert(make_pair(tempHistoName, triggerStackingHisto));
+  triggerStackingHisto->setTitle("CMS Pixel ROC trigger stacking;stacked triggers;# events");
 
   streamlog_out ( MESSAGE5 )  << "end of Booking histograms " << endl;
 }

@@ -156,6 +156,7 @@ namespace eutelescope
 	    static std::string _triggerPhasePixelsHistoName;
 	    static std::string _triggerPhaseHitHistoName;
 	    static std::string _triggerPhaseHitCutHistoName;
+	    static std::string _triggerStackingHistoName;
 	    static std::string _dataPhaseHistoName;
 	    static std::string _dataPhaseHitHistoName;
 	    static std::string _dataPhaseHitCutHistoName;
