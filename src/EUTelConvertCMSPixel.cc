@@ -135,6 +135,8 @@ EUTelConvertCMSPixel::EUTelConvertCMSPixel ():DataSourceProcessor  ("EUTelConver
   registerOptionalParameter("debugDecoder","Set decoder verbosity level: QUIET, SUMMARY, ERROR, WARNING, INFO, DEBUG, DEBUG1-4", _debugSwitch, static_cast< std::string > ( "SUMMARY" ) );
   
   registerProcessorParameter("HistogramFilling","Switch on or off the histogram filling", _fillHistos, static_cast< bool > ( true ) );
+
+  registerProcessorParameter("RejectEvents","Reject events with any decoding issue", _rejectEvents, static_cast< bool > ( false ) );
  
 }
 
@@ -296,6 +298,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       // Get timestamp from first event:
       if(timestamp_event1 == 0) timestamp_event1 = evt_timing.timestamp;
 
+
       if(status <= DEC_ERROR_NO_MORE_DATA) {
 	streamlog_out (ERROR) << "Decoder returned error " << status << std::endl;
 	// We didn't write single event - it was just impossible to open/read the data file:
@@ -308,11 +311,17 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	else break;
       }
       else if(status <= DEC_ERROR_NO_TBM_HEADER ) {
-	streamlog_out (WARNING5) << "There was an exception while processing event " << eventNumber << ". Will continue with next event." << std::endl;
+	streamlog_out (DEBUG1) << "There was an exception while processing event " << eventNumber << ". Will continue with next event." << std::endl;
 	continue;
       }
-      else if(status <= DEC_ERROR_INVALID_ROC_HEADER) {
-	streamlog_out (DEBUG5) << "Issue with ROC header or pixel address in event " << eventNumber << ". Event will be used anyway." << std::endl;
+      // Catch all decoding errors worse than "empty event"
+      else if(status < DEC_ERROR_EMPTY_EVENT) {
+	streamlog_out (DEBUG1) << "Issue with ROC header or pixel address in event " << eventNumber << ".";
+	if(_rejectEvents) {
+	  streamlog_out(DEBUG5) << " Will continue with next event." << std::endl;
+	  continue;
+	}
+	else streamlog_out(DEBUG1) << " Event will be used anyway." << std::endl;
       }
       else if(!_writeEmptyEvents && status == DEC_ERROR_EMPTY_EVENT) {
 	streamlog_out (DEBUG5) << "Event " << eventNumber << " is empty. Continuing with next." << std::endl;

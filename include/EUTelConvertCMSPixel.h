@@ -232,6 +232,9 @@ namespace eutelescope
 	    //! Enable histogram writing
             bool _fillHistos;
 
+	    //! Reject events with any decoding issues
+            bool _rejectEvents;
+
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
 	    //! Map of histograms
 	    std::map<std::string , AIDA::IBaseHistogram * > _aidaHistoMap;
