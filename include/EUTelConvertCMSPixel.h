@@ -152,6 +152,7 @@ namespace eutelescope
 			     int64_t timestamp, int triggerphase, int evt);
 
 	    // FIXME probably move to protected?
+	    static std::string _pixelMultiplicityHistoName;
 	    static std::string _triggerPhaseHistoName;
 	    static std::string _triggerPhaseBadEventsHistoName;
 	    static std::string _triggerPhasePixelsHistoName;

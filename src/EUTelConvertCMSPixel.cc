@@ -61,6 +61,7 @@ using namespace eutelescope;
 
 #if defined(USE_AIDA) || defined(MARLIN_USE_AIDA)
 std::string EUTelConvertCMSPixel::_hitMapHistoName              = "hitMap";
+std::string EUTelConvertCMSPixel::_pixelMultiplicityHistoName = "pixelMultiplicity";
 std::string EUTelConvertCMSPixel::_hitMapTrigHistoName          = "hitMapTrig";
 std::string EUTelConvertCMSPixel::_hitMapCutHistoName           = "hitMapCut";
 std::string EUTelConvertCMSPixel::_pulseHeightHistoName        	= "pulseHeight";
@@ -282,6 +283,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       std::vector< pixel > event_data;
       CMSPixel::timing evt_timing;
       std::vector<std::pair< uint8_t, uint8_t> > evt_readback;
+      std::map<size_t, size_t> pixelcount;
 
       // Read next event from file, containing all ROCs / pixels for one trigger:
       status = readout->get_event(&event_data,&evt_readback,evt_timing);
@@ -305,7 +307,8 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	if(eventNumber == 1) {
 	  streamlog_out ( WARNING ) << "The data file contained no valid event." << endl;
 	  readout->statistics.print();
-	  throw DataNotAvailableException("Failed to read from data file.");
+	  //throw DataNotAvailableException("Failed to read from data file.");
+	  return;
 	}
 	// Else: we just reached EOF.
 	else break;
@@ -335,7 +338,6 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       }
 
       LCCollectionVec * sparseDataCollection = new LCCollectionVec(LCIO::TRACKERDATA);
-
 
       // Fill the trigger phase histograms of events containing a hit:
       if(!event_data.empty()) (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHitHistoName]))->fill((int)evt_timing.trigger_phase);
@@ -425,6 +427,9 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	// Now add all the pixel hits to that sensor:
 	while(it != event_data.end() && iROC == (*it).roc) {
 	  streamlog_out(DEBUG5) << "At ROC " << (*it).roc << ", still having hit data..." << std::endl;
+	  // Count those pixels:
+	  pixelcount[iROC]++;
+
 	  // Create a new pixel to be stored:
 	  auto_ptr<EUTelSimpleSparsePixel> sparsePixel(new EUTelSimpleSparsePixel);
 	  sparsePixel->setXCoord( static_cast<int>((*it).col ));
@@ -462,6 +467,11 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 
       streamlog_out(DEBUG5) << "We stored all pixel hits on " << sparseDataCollection->size() 
 			    << " ROCs, finalising event now..." << std::endl;
+
+      for(size_t i = 0; i < pixelcount.size(); i++) {
+	std::string tempHistoName = _pixelMultiplicityHistoName + "_d" + to_string( i );
+	(dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[tempHistoName]))->fill(pixelcount[i]);
+      }
 
       // Start constructing current event:
       evt = new EUTelEventImpl();
@@ -556,6 +566,11 @@ void EUTelConvertCMSPixel::bookHistos() {
     basePath = "detector_" + to_string( iDetector );
     AIDAProcessor::tree(this)->mkdir(basePath.c_str());
     basePath.append("/");
+
+    tempHistoName = _pixelMultiplicityHistoName + "_d" + to_string( iDetector );
+    AIDA::IHistogram1D * pixelMultiplicityHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D((basePath + tempHistoName).c_str(), 101, 0, 100);
+    _aidaHistoMap.insert(make_pair(tempHistoName, pixelMultiplicityHisto));
+    pixelMultiplicityHisto->setTitle("Pixel Multiplicity;# pixels / event; # events");
 
     tempHistoName = _hitMapHistoName + "_d" + to_string( iDetector );
     AIDA::IHistogram2D * hitMapHisto =
