@@ -151,6 +151,7 @@ void EUTelConvertCMSPixel::init () {
   _runNumber = atoi(_srunNumber.c_str());
   _isFirstEvent = true;
   eventNumber = 0;
+  eventDisplayNumber = 0;
   timestamp_event1 = 0;
     
   if(_haveTBM) flags += FLAG_HAVETBM;
@@ -348,6 +349,14 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 
       // Initialize iterator ROC counter:
       std::vector<pixel>::const_iterator it = event_data.begin();
+
+      // Event displays:
+      bool eventDisplay = false;
+      if(eventDisplayNumber < 50) {
+	streamlog_out(DEBUG) << "Store event " << eventNumber << endl;
+	eventDisplayNumber++;
+	eventDisplay = true;
+      }
         
       // Now loop over all ROC chips to be read out:
       for(uint16_t iROC = 0; iROC < _noOfROC; iROC++) {
@@ -423,12 +432,19 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	sparseDataEncoder["sparsePixelType"] = static_cast<int>(1);
 	sparseDataEncoder.setCellID(sparse);
 	EUTelSparseDataImpl<EUTelSimpleSparsePixel> sparseData(sparse) ;
-        
+
 	// Now add all the pixel hits to that sensor:
 	while(it != event_data.end() && iROC == (*it).roc) {
 	  streamlog_out(DEBUG5) << "At ROC " << (*it).roc << ", still having hit data..." << std::endl;
 	  // Count those pixels:
 	  pixelcount[iROC]++;
+
+	  // Fill pixel in event display (ROC 0 only):
+	  if(eventDisplay && (*it).roc == 0) {
+	    streamlog_out(DEBUG5) << "Filling event display " << eventNumber << " with col " << (*it).col << " row " << (*it).row << endl;
+	    std::string evtdisplay = "evt" + to_string(eventNumber);
+	    (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[evtdisplay]))->fill(static_cast<double>((*it).col), static_cast<double>((*it).row), static_cast<double>((*it).raw));
+	  }
 
 	  // Create a new pixel to be stored:
 	  auto_ptr<EUTelSimpleSparsePixel> sparsePixel(new EUTelSimpleSparsePixel);
@@ -561,6 +577,15 @@ void EUTelConvertCMSPixel::bookHistos() {
 
   string tempHistoName;
   string basePath;
+
+  // Pre-book space for 50 event displays:
+  AIDAProcessor::tree(this)->mkdir("EventDisplays");
+  for(size_t i = 0; i < 50; i++) {
+    AIDA::IHistogram2D * eventMapHisto = AIDAProcessor::histogramFactory(this)->createHistogram2D(("EventDisplays/eventDisplay_d0_e" + to_string(i)).c_str(), _noOfXPixel, 0, _noOfXPixel, _noOfYPixel, 0, _noOfYPixel);
+    _aidaHistoMap.insert(make_pair(("evt" + to_string(i)), eventMapHisto));
+    eventMapHisto->setTitle("ROC 0 Event " + to_string(i) + ";column;row");
+  }
+
   for (unsigned int iDetector = 0; iDetector < _noOfROC; iDetector++) {
 
     basePath = "detector_" + to_string( iDetector );

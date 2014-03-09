@@ -260,6 +260,8 @@ namespace eutelescope
 	    //! Event number in current run
             int eventNumber;
 
+	    //! Number of event displays created:
+	    int eventDisplayNumber;
 	    
             unsigned int iROC;
             int status;
