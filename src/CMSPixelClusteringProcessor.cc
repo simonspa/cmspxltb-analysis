@@ -63,6 +63,8 @@
 #include <AIDA/IHistogram1D.h>
 #include <AIDA/IHistogram2D.h>
 #include <AIDA/ITree.h>
+#include <AIDA/ITupleFactory.h>
+#include <AIDA/ITuple.h>
 #endif
 
 // system includes <>
@@ -104,6 +106,8 @@ std::string CMSPixelClusteringProcessor::_cluster3pxHistoName           = "clust
 std::string CMSPixelClusteringProcessor::_cluster4pxHistoName           = "clusters4pixel";
 std::string CMSPixelClusteringProcessor::_cluster1_2pxHistoName         = "clusters1+2pixel";
 std::string CMSPixelClusteringProcessor::_clusterMorepxHistoName        = "clustersMorePixel";
+std::string _TupleNamePixel                                             = "ClusterTuple";
+AIDA::ITuple *_TuplePixel;
 #endif
 
 static const int NOCLUSTER=-1;
@@ -657,8 +661,16 @@ void CMSPixelClusteringProcessor::fillHistos (LCEvent * evt) {
 					(dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[tempHistoName]))->fill(Pixel.getSignal());
 					
 					tempHistoName = _chargeMapHistoName + "_d" + to_string( sensorID );
-    				(dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[tempHistoName]))->fill(Pixel.getXCoord(), Pixel.getYCoord(), Pixel.getSignal());
+                    (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[tempHistoName]))->fill(Pixel.getXCoord(), Pixel.getYCoord(), Pixel.getSignal());
 
+                    _TuplePixel->fill(0,(int)Pixel.getXCoord());
+                    _TuplePixel->fill(1,(int)Pixel.getYCoord());
+                    _TuplePixel->fill(2,(int)sensorID);
+                    _TuplePixel->fill(3,(double) Pixel.getSignal());
+                    _TuplePixel->fill(4,(int)size);
+                    _TuplePixel->fill(5,(int)evt->getRunNumber());
+                    _TuplePixel->fill(6,(int)evt->getEventNumber());
+                    _TuplePixel->addRow();
 				}
 				
 				tempHistoName = _hitMapHistoName + "_d" + to_string( sensorID );
@@ -834,6 +846,32 @@ void CMSPixelClusteringProcessor::bookHistos() {
 		hitMapHisto->setTitle("Charge map [in DAC]");
 		
 	}
+    std::vector<std::string> _columnNames;
+    std::vector<std::string> _columnType;
+
+    _columnNames.push_back("SensorIDx");
+    _columnType.push_back("int");
+
+    _columnNames.push_back("SensorIDy");
+    _columnType.push_back("int");
+
+    _columnNames.push_back("SensorIDz");
+    _columnType.push_back("int");
+
+    _columnNames.push_back("energy");
+    _columnType.push_back("double");
+
+    _columnNames.push_back("clusterSize");
+    _columnType.push_back("int");
+
+    _columnNames.push_back("RunNumber");
+    _columnType.push_back("int");
+
+    _columnNames.push_back("EventNumber");
+    _columnType.push_back("int");
+    //AIDA::ITuple * ;
+    _TuplePixel = AIDAProcessor::tupleFactory(this)->create(_TupleNamePixel, _TupleNamePixel, _columnNames, _columnType, ""); 
+
 	streamlog_out ( MESSAGE0 )  << "end of Booking histograms " << endl;
 }
 #endif
