@@ -154,6 +154,7 @@ namespace eutelescope
 	    // FIXME probably move to protected?
 	    static std::string _pixelMultiplicityHistoName;
 	    static std::string _triggerPhaseHistoName;
+	    static std::string _triggerDeltaTHistoName;
 	    static std::string _triggerPhaseBadEventsHistoName;
 	    static std::string _triggerPhasePixelsHistoName;
 	    static std::string _triggerPhaseHitHistoName;
@@ -196,6 +197,7 @@ namespace eutelescope
 
 	    //! Timestamp of the first event recorded
 	    int64_t timestamp_event1;
+	    int64_t timestamp_previous_event;
 
 	    //! Run number
             int _runNumber;

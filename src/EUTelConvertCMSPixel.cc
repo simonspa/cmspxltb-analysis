@@ -66,6 +66,7 @@ std::string EUTelConvertCMSPixel::_hitMapTrigHistoName          = "hitMapTrig";
 std::string EUTelConvertCMSPixel::_hitMapCutHistoName           = "hitMapCut";
 std::string EUTelConvertCMSPixel::_pulseHeightHistoName        	= "pulseHeight";
 std::string EUTelConvertCMSPixel::_triggerPhaseHistoName        = "triggerPhase";
+std::string EUTelConvertCMSPixel::_triggerDeltaTHistoName       = "triggerDeltaT";
 std::string EUTelConvertCMSPixel::_triggerPhaseBadEventsHistoName = "triggerPhaseBadEvents";
 std::string EUTelConvertCMSPixel::_triggerPhasePixelsHistoName  =  "triggerPhasePixels";
 std::string EUTelConvertCMSPixel::_triggerPhaseHitHistoName     = "triggerPhaseHit";
@@ -153,6 +154,7 @@ void EUTelConvertCMSPixel::init () {
   eventNumber = 0;
   eventDisplayNumber = 0;
   timestamp_event1 = 0;
+  timestamp_previous_event = 0;
     
   if(_haveTBM) flags += FLAG_HAVETBM;
   if(_useIPBus) flags += FLAG_16BITS_PER_WORD;
@@ -291,6 +293,9 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 
       // Fill the trigger phase histogram for all events, even empty ones:
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseHistoName]))->fill((int)evt_timing.trigger_phase);
+      (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerDeltaTHistoName]))->fill((int)evt_timing.timestamp - timestamp_previous_event);
+      // Store current timestamp:
+      timestamp_previous_event = evt_timing.timestamp;
 
       // If we encountered some sort of decoding error, fill it in this histogram:
       if(status < DEC_ERROR_EMPTY_EVENT) (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseBadEventsHistoName]))->fill((int)evt_timing.trigger_phase);
@@ -649,6 +654,11 @@ void EUTelConvertCMSPixel::bookHistos() {
     _aidaHistoMap.insert(make_pair(tempHistoName, triggerPhasePixelsHisto));
     triggerPhasePixelsHisto->setTitle(triggerPhasePixelsHistoTitle.c_str());
   }
+
+  tempHistoName = _triggerDeltaTHistoName;
+  AIDA::IHistogram1D * triggerDeltaTHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 150,0,150);
+  _aidaHistoMap.insert(make_pair(tempHistoName, triggerDeltaTHisto));
+  triggerDeltaTHisto->setTitle("dt between triggers;dt [us]; #");
 
   tempHistoName = _triggerPhaseHistoName;
   AIDA::IHistogram1D * triggerPhaseHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 10,-1,8);
