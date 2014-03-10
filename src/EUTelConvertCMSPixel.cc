@@ -352,7 +352,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 
       // Event displays:
       bool eventDisplay = false;
-      if(eventDisplayNumber < 50) {
+      if(eventDisplayNumber < 49) {
 	streamlog_out(DEBUG) << "Store event " << eventNumber << endl;
 	eventDisplayNumber++;
 	eventDisplay = true;
@@ -442,8 +442,9 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	  // Fill pixel in event display (ROC 0 only):
 	  if(eventDisplay && (*it).roc == 0) {
 	    streamlog_out(DEBUG5) << "Filling event display " << eventNumber << " with col " << (*it).col << " row " << (*it).row << endl;
-	    std::string evtdisplay = "evt" + to_string(eventNumber);
+	    std::string evtdisplay = "evt" + to_string(eventDisplayNumber);
 	    (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[evtdisplay]))->fill(static_cast<double>((*it).col), static_cast<double>((*it).row), static_cast<double>((*it).raw));
+	    (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[evtdisplay]))->setTitle("ROC 0 Event " + to_string(eventNumber) + ";column;row");
 	  }
 
 	  // Create a new pixel to be stored:
@@ -620,7 +621,7 @@ void EUTelConvertCMSPixel::bookHistos() {
 
     string pulseHeightTitle = "pulse height ROC" + to_string( iDetector ) + ";ADC counts;# events";
     tempHistoName = _pulseHeightHistoName + "_d" + to_string( iDetector );
-    AIDA::IHistogram1D * pulseHeightHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D( (basePath + tempHistoName).c_str(), 525,-1050,1050);
+    AIDA::IHistogram1D * pulseHeightHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D( (basePath + tempHistoName).c_str(), 255,0,255);
     _aidaHistoMap.insert(make_pair(tempHistoName, pulseHeightHisto));
     pulseHeightHisto->setTitle(pulseHeightTitle.c_str());
 
