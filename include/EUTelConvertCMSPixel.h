@@ -172,6 +172,7 @@ namespace eutelescope
 	    static std::string _hitMapCutHistoName;
 	    //! Histogram name of the pulse height distribution
             static std::string _pulseHeightHistoName;
+	    static std::string _eventStatusHistoName;
 #endif            
     
         protected:

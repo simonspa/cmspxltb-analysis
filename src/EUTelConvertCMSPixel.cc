@@ -78,6 +78,7 @@ std::string EUTelConvertCMSPixel::_dataPhaseHitCutHistoName     = "dataPhaseHitC
 std::string EUTelConvertCMSPixel::_dcolMonitorHistoName         = "dcolMonitor";
 std::string EUTelConvertCMSPixel::_dcolMonitorEvtHistoName      = "dcolMonitorEvt";
 std::string EUTelConvertCMSPixel::_rbMonitorHistoName           = "rbMonitor";
+std::string EUTelConvertCMSPixel::_eventStatusHistoName         = "eventStatus";
 #endif
 
 
@@ -302,6 +303,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_dataPhaseHistoName]))->fill((int)evt_timing.data_phase);
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerStackingHistoName]))->fill((int)evt_timing.triggers_stacked);
+      (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_eventStatusHistoName]))->fill((int)evt_timing.status);
 
       // Get timestamp from first event:
       if(timestamp_event1 == 0) timestamp_event1 = evt_timing.timestamp;
@@ -700,6 +702,11 @@ void EUTelConvertCMSPixel::bookHistos() {
   AIDA::IHistogram1D * triggerStackingHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 17,0,16);
   _aidaHistoMap.insert(make_pair(tempHistoName, triggerStackingHisto));
   triggerStackingHisto->setTitle("CMS Pixel ROC trigger stacking;stacked triggers;# events");
+
+  tempHistoName = _eventStatusHistoName;
+  AIDA::IHistogram1D * eventStatusHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 17,0,16);
+  _aidaHistoMap.insert(make_pair(tempHistoName, eventStatusHisto));
+  eventStatusHisto->setTitle("IPBus event status bits;event status;# events");
 
   streamlog_out ( MESSAGE5 )  << "end of Booking histograms " << endl;
 }
