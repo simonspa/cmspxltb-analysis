@@ -361,7 +361,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       bool eventDisplay = false;
       if(eventDisplayNumber < 50) {
 	int roc0ct = 0;
-	for(std::vector<pixel>::iterator ct = event_data.begin(); ct->roc == 0 && ct != event_data.end(); ct++) { roc0ct++; }
+	for(std::vector<pixel>::iterator ct = event_data.begin(); ct != event_data.end() && ct->roc == 0; ct++) { roc0ct++; }
 	if(roc0ct > 50) {
 	  streamlog_out(MESSAGE) << "Store event " << eventNumber << " as event display " << eventDisplayNumber << "." << endl;
 	  if(eventDisplayNumber == 49) streamlog_out(MESSAGE) << "This is the last event display stored." << endl;
