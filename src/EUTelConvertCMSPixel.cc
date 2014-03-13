@@ -412,7 +412,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	  }
 	  else if(evt_readback.at(iROC).first == 12) {
 	    dacname = "Iana [mA]";
-	    if(_RIC_type < ROC_PSI46DIGV21) { value = evt_readback.at(iROC).second*0.1425; } // 12  Iana (0.1425 mA / digit)
+	    if(_ROC_type < ROC_PSI46DIGV21) { value = evt_readback.at(iROC).second*0.1425; } // 12  Iana (0.1425 mA / digit)
 	    else { value = evt_readback.at(iROC).second*0.25; } // Digv2.1, according to http://cms.web.psi.ch/phase1/psi46dig/index.html#iana
 	  }
 	  else {
