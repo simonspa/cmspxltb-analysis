@@ -165,6 +165,7 @@ namespace eutelescope
 	    static std::string _dataPhaseHitCutHistoName;
 	    static std::string _dcolMonitorHistoName;
 	    static std::string _dcolMonitorEvtHistoName;
+	    static std::string _occupancyVsTimeHistoName;
 	    static std::string _rbMonitorHistoName;
 	    //! Histogram name of the hit map
 	    static std::string _hitMapHistoName;

@@ -77,6 +77,7 @@ std::string EUTelConvertCMSPixel::_dataPhaseHitHistoName        = "dataPhaseHit"
 std::string EUTelConvertCMSPixel::_dataPhaseHitCutHistoName     = "dataPhaseHitCut";
 std::string EUTelConvertCMSPixel::_dcolMonitorHistoName         = "dcolMonitor";
 std::string EUTelConvertCMSPixel::_dcolMonitorEvtHistoName      = "dcolMonitorEvt";
+std::string EUTelConvertCMSPixel::_occupancyVsTimeHistoName    = "occupancyVsTime";
 std::string EUTelConvertCMSPixel::_rbMonitorHistoName           = "rbMonitor";
 std::string EUTelConvertCMSPixel::_eventStatusHistoName         = "eventStatus";
 #endif
@@ -584,6 +585,9 @@ void EUTelConvertCMSPixel::fillHistos (int xCoord, int yCoord, int value, int se
   tempHistoName = _dcolMonitorEvtHistoName + "_d" + to_string( sensorID );
   (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double>(evt), static_cast<double >(xCoord), 1.);
 
+  tempHistoName = _occupancyVsTimeHistoName + "_d" + to_string( sensorID );
+  (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double>(evt), 1.);
+
   tempHistoName = _triggerPhasePixelsHistoName + "_d" + to_string( sensorID );
   (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<int>(triggerphase));
 }
@@ -659,6 +663,12 @@ void EUTelConvertCMSPixel::bookHistos() {
     AIDA::IHistogram2D * dcolMonitorEvtHisto = AIDAProcessor::histogramFactory(this)->createHistogram2D( (basePath + tempHistoName).c_str(), 5000, 0, 500000, 52, -0.5, 51.5);
     _aidaHistoMap.insert(make_pair(tempHistoName, dcolMonitorEvtHisto));
     dcolMonitorEvtHisto->setTitle(dcolMonitorEvtTitle.c_str());
+
+    string occupancyVsTimeTitle = "Occupancy over time, ROC" + to_string( iDetector ) + ";event # / 100;column ID;hits per 100 events";
+    tempHistoName = _occupancyVsTimeHistoName + "_d" + to_string( iDetector );
+    AIDA::IHistogram1D * occupancyVsTimeHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D( (basePath + tempHistoName).c_str(), 5000, 0, 500000);
+    _aidaHistoMap.insert(make_pair(tempHistoName, occupancyVsTimeHisto));
+    occupancyVsTimeHisto->setTitle(occupancyVsTimeTitle.c_str());
 
     std::string triggerPhasePixelsHistoTitle = "Trigger Phase over pixel hits, ROC " + to_string( iDetector ) + ";phase bits; # pixel hits";
     tempHistoName = _triggerPhasePixelsHistoName + "_d" + to_string( iDetector );
