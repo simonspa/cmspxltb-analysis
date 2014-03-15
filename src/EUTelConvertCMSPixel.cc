@@ -78,6 +78,7 @@ std::string EUTelConvertCMSPixel::_dataPhaseHitCutHistoName     = "dataPhaseHitC
 std::string EUTelConvertCMSPixel::_dcolMonitorHistoName         = "dcolMonitor";
 std::string EUTelConvertCMSPixel::_dcolMonitorEvtHistoName      = "dcolMonitorEvt";
 std::string EUTelConvertCMSPixel::_occupancyVsTimeHistoName    = "occupancyVsTime";
+std::string EUTelConvertCMSPixel::_badeventsVsTimeHistoName = "badeventsVsTime";
 std::string EUTelConvertCMSPixel::_rbMonitorHistoName           = "rbMonitor";
 std::string EUTelConvertCMSPixel::_eventStatusHistoName         = "eventStatus";
 #endif
@@ -300,7 +301,10 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       timestamp_previous_event = evt_timing.timestamp;
 
       // If we encountered some sort of decoding error, fill it in this histogram:
-      if(status < DEC_ERROR_EMPTY_EVENT) (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseBadEventsHistoName]))->fill((int)evt_timing.trigger_phase);
+      if(status < DEC_ERROR_EMPTY_EVENT) {
+	(dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerPhaseBadEventsHistoName]))->fill((int)evt_timing.trigger_phase);
+	(dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_badeventsVsTimeHistoName]))->fill(static_cast<double>(eventNumber));
+      }
 
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_dataPhaseHistoName]))->fill((int)evt_timing.data_phase);
       (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_triggerStackingHistoName]))->fill((int)evt_timing.triggers_stacked);
@@ -329,6 +333,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       // Catch all decoding errors worse than "empty event"
       else if(status < DEC_ERROR_EMPTY_EVENT) {
 	streamlog_out (DEBUG1) << "Issue with ROC header or pixel address in event " << eventNumber << ".";
+
 	if(_rejectEvents) {
 	  streamlog_out(DEBUG5) << " Will continue with next event." << std::endl;
 	  continue;
@@ -664,7 +669,7 @@ void EUTelConvertCMSPixel::bookHistos() {
     _aidaHistoMap.insert(make_pair(tempHistoName, dcolMonitorEvtHisto));
     dcolMonitorEvtHisto->setTitle(dcolMonitorEvtTitle.c_str());
 
-    string occupancyVsTimeTitle = "Occupancy over time, ROC" + to_string( iDetector ) + ";event # / 100;column ID;hits per 100 events";
+    string occupancyVsTimeTitle = "Occupancy over time, ROC" + to_string( iDetector ) + ";event # / 100;hits per 100 events";
     tempHistoName = _occupancyVsTimeHistoName + "_d" + to_string( iDetector );
     AIDA::IHistogram1D * occupancyVsTimeHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D( (basePath + tempHistoName).c_str(), 5000, 0, 500000);
     _aidaHistoMap.insert(make_pair(tempHistoName, occupancyVsTimeHisto));
@@ -676,6 +681,11 @@ void EUTelConvertCMSPixel::bookHistos() {
     _aidaHistoMap.insert(make_pair(tempHistoName, triggerPhasePixelsHisto));
     triggerPhasePixelsHisto->setTitle(triggerPhasePixelsHistoTitle.c_str());
   }
+
+  tempHistoName = _badeventsVsTimeHistoName;
+  AIDA::IHistogram1D * badeventsVsTimeHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 500, 0, 500000);
+  _aidaHistoMap.insert(make_pair(tempHistoName, badeventsVsTimeHisto));
+  badeventsVsTimeHisto->setTitle("Bad events over time;event # / 1000;bad events");
 
   tempHistoName = _triggerDeltaTHistoName;
   AIDA::IHistogram1D * triggerDeltaTHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 150,0,150);
