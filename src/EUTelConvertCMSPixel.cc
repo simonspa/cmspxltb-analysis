@@ -78,6 +78,8 @@ std::string EUTelConvertCMSPixel::_dataPhaseHitCutHistoName     = "dataPhaseHitC
 std::string EUTelConvertCMSPixel::_dcolMonitorHistoName         = "dcolMonitor";
 std::string EUTelConvertCMSPixel::_dcolMonitorEvtHistoName      = "dcolMonitorEvt";
 std::string EUTelConvertCMSPixel::_occupancyVsTimeHistoName    = "occupancyVsTime";
+std::string EUTelConvertCMSPixel::_badPxVsOccupancyHistoName   = "badPxVsOccupancy";
+std::string EUTelConvertCMSPixel::_badPxVsTotalOccupancyHistoName = "badPxVsTotalOccupancy";
 std::string EUTelConvertCMSPixel::_badeventsVsTimeHistoName = "badeventsVsTime";
 std::string EUTelConvertCMSPixel::_rbMonitorHistoName           = "rbMonitor";
 std::string EUTelConvertCMSPixel::_eventStatusHistoName         = "eventStatus";
@@ -334,6 +336,11 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
       else if(status < DEC_ERROR_EMPTY_EVENT) {
 	streamlog_out (DEBUG1) << "Issue with ROC header or pixel address in event " << eventNumber << ".";
 
+	if(status == DEC_ERROR_INVALID_ADDRESS) {
+	  // Fill bad pixels vs total occupancy plot:
+	  (dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[_badPxVsTotalOccupancyHistoName]))->fill(event_data.size(),(int)readout->evt->statistics.pixels_invalid);
+	}
+
 	if(_rejectEvents) {
 	  streamlog_out(DEBUG5) << " Will continue with next event." << std::endl;
 	  continue;
@@ -482,7 +489,7 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	  if((*it).roc == _cutHitmap[0] 
 	     && (*it).col >= _cutHitmap[1] && (*it).col <= _cutHitmap[2]
 	     && (*it).row >= _cutHitmap[3] && (*it).row <= _cutHitmap[4]) {
-	      string tempHistoName = _hitMapCutHistoName + "_d" + to_string((*it).roc);
+	    string tempHistoName = _hitMapCutHistoName + "_d" + to_string((*it).roc);
 	      (dynamic_cast<AIDA::IHistogram2D*> (_aidaHistoMap[tempHistoName]))->fill(static_cast<double >((*it).col), static_cast<double >((*it).row), 1.);
 
 	      if(!cut_done) {
@@ -497,10 +504,12 @@ void EUTelConvertCMSPixel::readDataSource (int Ntrig)
 	  // Move on to next pixel hit:
 	  ++it;
 	}
+
+	std::string tempName = _badPxVsOccupancyHistoName + "_d" + to_string(iROC);
+	(dynamic_cast<AIDA::IHistogram1D*> (_aidaHistoMap[tempName]))->fill(sparseData.size(),(int)readout->evt->statistics.rocmap_invalid[iROC]);
 	
 	streamlog_out(DEBUG5) << sparseData.size() << " pixel hits stored for this ROC." << std::endl;
 	sparseDataCollection->push_back( sparse );
-            
       }
 
       if(eventDisplay) eventDisplayNumber++;
@@ -675,12 +684,23 @@ void EUTelConvertCMSPixel::bookHistos() {
     _aidaHistoMap.insert(make_pair(tempHistoName, occupancyVsTimeHisto));
     occupancyVsTimeHisto->setTitle(occupancyVsTimeTitle.c_str());
 
+    string badPxVsOccupancyTitle = "Bad Pixels vs. Occupancy, ROC" + to_string( iDetector ) + ";pixels / event; bad pixel hits";
+    tempHistoName = _badPxVsOccupancyHistoName + "_d" + to_string( iDetector );
+    AIDA::IHistogram1D * badPxVsOccupancyHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D( (basePath + tempHistoName).c_str(), 100, 0, 100);
+    _aidaHistoMap.insert(make_pair(tempHistoName, badPxVsOccupancyHisto));
+    badPxVsOccupancyHisto->setTitle(badPxVsOccupancyTitle.c_str());
+
     std::string triggerPhasePixelsHistoTitle = "Trigger Phase over pixel hits, ROC " + to_string( iDetector ) + ";phase bits; # pixel hits";
     tempHistoName = _triggerPhasePixelsHistoName + "_d" + to_string( iDetector );
     AIDA::IHistogram1D * triggerPhasePixelsHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D( (basePath + tempHistoName).c_str(), 10,-1,8);
     _aidaHistoMap.insert(make_pair(tempHistoName, triggerPhasePixelsHisto));
     triggerPhasePixelsHisto->setTitle(triggerPhasePixelsHistoTitle.c_str());
   }
+
+  tempHistoName = _badPxVsTotalOccupancyHistoName;
+  AIDA::IHistogram1D * badPxVsTotalOccupancyHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 300, 0, 300);
+  _aidaHistoMap.insert(make_pair(tempHistoName, badPxVsTotalOccupancyHisto));
+  badPxVsTotalOccupancyHisto->setTitle("Bad Pixels vs. Occupancy;pixels / event; bad pixel hits");
 
   tempHistoName = _badeventsVsTimeHistoName;
   AIDA::IHistogram1D * badeventsVsTimeHisto = AIDAProcessor::histogramFactory(this)->createHistogram1D(tempHistoName.c_str(), 500, 0, 500000);
