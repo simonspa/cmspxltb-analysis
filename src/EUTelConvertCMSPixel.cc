@@ -143,7 +143,7 @@ EUTelConvertCMSPixel::EUTelConvertCMSPixel ():DataSourceProcessor  ("EUTelConver
   
   registerProcessorParameter("HistogramFilling","Switch on or off the histogram filling", _fillHistos, static_cast< bool > ( true ) );
 
-  registerProcessorParameter("RejectEvents","Reject events with any decoding issue", _rejectEvents, static_cast< bool > ( false ) );
+  registerProcessorParameter("RejectEvents","Reject events with any decoding issue", _rejectEvents, static_cast< bool > ( true ) );
  
 }
 
