@@ -202,7 +202,7 @@ bool CMSPixelFileDecoderRAL::process_rawdata(std::vector< uint16_t > * rawdata) 
 	((time2>>8)&0xff);
 
       cms_t.trigger_phase = (last>>13)&0xf;
-      cms_t.status = (last>>8)&0xf;
+      cms_t.status = (last>>8)&0x1f;
       cms_t.data_phase = (nexttolast>>6)&0xf;
       cms_t.triggers_stacked = (nexttolast)&0xff;
     }
@@ -224,7 +224,7 @@ bool CMSPixelFileDecoderRAL::process_rawdata(std::vector< uint16_t > * rawdata) 
 	((time2)&0xff);
 
       cms_t.trigger_phase = (last>>5)&0xf;
-      cms_t.status = last&0xf;
+      cms_t.status = last&0x1f;
       cms_t.data_phase = (last>>14)&0xf;
       cms_t.triggers_stacked = (last>>8)&0xff;
     }
@@ -243,7 +243,7 @@ bool CMSPixelFileDecoderRAL::process_rawdata(std::vector< uint16_t > * rawdata) 
 
     // Check the event status for timeouts:
     // IPBus event status is the sum of: 1=token sent out, 2=beginning of data detected, 4=token received back, 8=timeout
-    if(cms_t.status != 7) {
+    if((cms_t.status&0xf) != 7) {
       LOG(logERROR) << "Invalid event status detected.";
       statistics.evt_invalid++;
       return false;
@@ -563,22 +563,17 @@ bool CMSPixelFileDecoderPSI_DTB::chop_datastream(std::vector< uint16_t > * rawda
   
   // Store the first header word:
   rawdata->push_back(word);
-  LOG(logDEBUG4) << "Add first: " << std::hex << word << std::dec << std::endl;      
 
   // read the data until the next MTB header arises:
   // morewords:
   if(!readWord(word)) return false;
   while( !((word&0xF000) > 0x0000) && !feof(mtbStream)){
     rawdata->push_back(word);
-    LOG(logDEBUG4) << "Add " << std::hex << word << std::dec << std::endl;      
     if(!readWord(word)) return false;
   }
 
   // Store the last data word:
-  if((word&0xF000) == 0x4000) {
-     LOG(logDEBUG4) << "Add " << std::hex << word << std::dec << std::endl;      
-     rawdata->push_back(word);
-  }
+  if((word&0xF000) == 0x4000) { rawdata->push_back(word); }
   else {
      // Rewind one word to detect the header correctly later on:
      fseek(mtbStream , -2 , SEEK_CUR);
@@ -883,10 +878,12 @@ bool CMSPixelEventDecoder::checkPixelOrder(int col, int row) {
   LOG(logDEBUG4) << "Last pixel was: col " << lastpixel.col << " row " << lastpixel.row;
   LOG(logDEBUG4) << "New pixel is: col " << col << " row " << row;
 
+  bool valid = true;
+
   // If new Column is below Column of the last pixel, order is violated.
   if(lastpixel.col > col) {
     LOG(logDEBUG4) << "Order is wrong! (newcol > oldcol)";
-    return false;
+    valid = false;
   }
   // If we are still in the same column, check for the row to be higher:
   else if(lastpixel.col == col) {
@@ -894,20 +891,20 @@ bool CMSPixelEventDecoder::checkPixelOrder(int col, int row) {
     if(col%2 != 0) {
       if(lastpixel.row < row) {
 	LOG(logDEBUG4) << "Order is wrong! (odd col: newrow < oldrow)";
-	return false;
+	valid = false;
       }
     }
     // In even columns the next row address is supposed to be higher:
     else if(lastpixel.row > row) {
       LOG(logDEBUG4) << "Order is wrong! (evencol: newrow > oldrow)";
-      return false;
+      valid = false;
     }
   }
   // Everything looks fine. Update the lastpixel with these values:
   LOG(logDEBUG4) << "Order is fine.";
   lastpixel.col = col;
   lastpixel.row = row;
-  return true;
+  return valid;
 }
 
 bool CMSPixelEventDecoder::convertDcolToCol(int dcol, int pix, int & col, int & row)
